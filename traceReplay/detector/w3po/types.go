@@ -1,4 +1,4 @@
-package tsanwrd
+package w3po
 
 type thread struct {
 	vc vcepoch

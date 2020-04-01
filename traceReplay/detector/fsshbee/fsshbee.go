@@ -51,7 +51,7 @@ func Init() {
 		&ListenerPostProcess{},
 	}
 
-	algos.RegisterDetector("fsshbee", &EventCollector{listeners})
+	algos.RegisterDetector("shbele", &EventCollector{listeners})
 
 }
 

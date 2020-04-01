@@ -11,7 +11,6 @@ import (
 	"./eraser"
 	fastTrack "./fasttrack"
 	"./fsshbee"
-	ptsanee "./preciseTsanee"
 	"./report"
 	"./shb"
 	"./shbee"
@@ -19,40 +18,25 @@ import (
 	sshb "./strictSHB"
 	"./threadSanitizer"
 	"./traceReplay"
-	"./tsanSC"
-	"./tsanSC2"
-	"./tsanee"
-	tsanwrd "./tsanv1_wrd"
-	ultratsanee "./ultraTsanee"
+	"./w3po"
 	"./wcp"
 	"./wcpp"
 )
 
 func init() {
 	fastTrack.Init()
-	//	goTrack.Init()
 	eraser.Init()
 	threadSanitizer.Init()
-	//	raceTrack.Init()
 	shb.Init()
-	//	speedygo.Init()
 	empty.Init()
-	//	svars.Init()
-	//	speedygov2.Init()
 	sshb.Init()
 	shbee.Init()
 	shbp.Init()
-	//	ucp.Init()
-	//	racequal.Init()
 	wcp.Init()
 	fsshbee.Init()
-	tsanee.Init()
 	wcpp.Init()
-	ptsanee.Init()
-	ultratsanee.Init()
-	tsanwrd.Init()
-	tsanSC.Init()
-	tsanSC2.Init()
+	w3po.Init()
+
 }
 
 var debugReplay = false

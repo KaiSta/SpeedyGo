@@ -1,4 +1,4 @@
-package tsanwrd
+package w3po
 
 import (
 	"../../util"
@@ -6,11 +6,11 @@ import (
 	"github.com/xojoc/bitset"
 )
 
-type ListenerDataAccessWCP struct{}
-type ListenerAsyncRcvWCP struct{}
-type ListenerAsyncSndWCP struct{}
+type ListenerDataAccessWCPHBC struct{}
+type ListenerAsyncRcvWCPHBC struct{}
+type ListenerAsyncSndWCPHBC struct{}
 
-func (l *ListenerDataAccessWCP) Put(p *util.SyncPair) {
+func (l *ListenerDataAccessWCPHBC) Put(p *util.SyncPair) {
 	if !p.DataAccess {
 		return
 	}
@@ -28,11 +28,14 @@ func (l *ListenerDataAccessWCP) Put(p *util.SyncPair) {
 	varstate.current++
 	newFE := &dot{v: t1.vc.clone(), int: varstate.current, t: uint16(p.T1),
 		sourceRef: p.Ev.Ops[0].SourceRef, line: uint16(p.Ev.Ops[0].Line),
-		write: p.Write, ls: make(map[uint32]struct{}), pos: p.Ev.LocalIdx}
+		write: p.Write, ls: make(map[uint32]struct{}), lsCount: make(map[uint32]int), pos: p.Ev.LocalIdx}
 	for _, k := range t1.ls { //copy lockset
+		//lk := locks[k]
+		//newFE.lsCount[k] = lk.count
 		newFE.ls[k] = struct{}{}
 	}
 
+	//var conflictingCritSections vcepoch = newvc2()
 	if p.Write {
 		newFrontier := make([]*dot, 0, len(varstate.frontier))
 		//connectTo := make([]*dot, 0)
@@ -47,6 +50,17 @@ func (l *ListenerDataAccessWCP) Put(p *util.SyncPair) {
 				if !intersect(newFE.ls, f.ls) {
 					report.ReportRace(report.Location{File: uint32(f.sourceRef), Line: uint32(f.line), W: f.write},
 						report.Location{File: p.Ev.Ops[0].SourceRef, Line: p.Ev.Ops[0].Line, W: true}, false, 0)
+				} else { //interesting case, two events are concurrent but protected by the same lock, if the previous one is a read and the current a write, we need to synchronize the threads! zu konvervativ! wer sagt dass das echt last write nicht zwishcen die crits geschoben werden kann?
+					// if !f.write { //prev is a read
+					// 	// should be release -> write sync, dont have the release event at the moment needs to be fixed in code
+					// 	for k := range newFE.ls {
+					// 		if _, ok := f.ls[k]; ok {
+					// 			xx := f.lsCount[k]
+					// 			csHist := t1.csHistory[k]
+					// 			conflictingCritSections = conflictingCritSections.ssync(csHist[xx].rel)
+					// 		}
+					// 	}
+					// }
 				}
 
 			} else if k < thi_at_j {
@@ -54,36 +68,22 @@ func (l *ListenerDataAccessWCP) Put(p *util.SyncPair) {
 			}
 		}
 
+		//	t1.vc = t1.vc.ssync(conflictingCritSections)
+
 		//varstate.updateGraph3(newFE, connectTo)
 
 		newFrontier = append(newFrontier, newFE) // ∪{i#Th(i)[i]}
 		varstate.frontier = newFrontier
 
-		varstate.lastWrite = t1.vc.clone()
+		varstate.lastWrite = t1.vc.clone().ssync(t1.hb)
 		varstate.lwDot = newFE
-
-		// if len(lockClues) > 0 {
-		// 	for _, l := range t1.ls {
-		// 		lk := locks[l]
-		// 		clues := lockClues[l]
-		// 		if clues.Get(lk.count) {
-		// 			varstate.lastWrite = varstate.lastWrite.ssync(lk.hb)
-		// 		}
-		// 	}
-		// }
-
-		// list, ok := varstate.graph.get(newFE.int)
-		// if ok && len(list) == 0 {
-		// 	list = append(list, &startDot)
-		// 	varstate.graph.add(newFE, list)
-		// }
 	} else if p.Read {
 		if varstate.lwDot != nil { // != nil if a last write exists!
 			newFE.v = newFE.v.ssync(varstate.lastWrite) //sync with last write in advance, necessary for the graph analysis in the following loop!
 		}
-		//	fmt.Println(newFE.v)
+
 		newFrontier := make([]*dot, 0, len(varstate.frontier))
-		//connectTo := make([]*dot, 0)
+
 		for _, f := range varstate.frontier {
 			k := f.v.get(uint32(f.t))          //j#k
 			thi_at_j := t1.vc.get(uint32(f.t)) //Th(i)[j]
@@ -98,13 +98,8 @@ func (l *ListenerDataAccessWCP) Put(p *util.SyncPair) {
 							report.Location{File: p.Ev.Ops[0].SourceRef, Line: p.Ev.Ops[0].Line, W: newFE.write}, false, 0)
 					}
 
-					//visited := &bitset.BitSet{}
-					//varstate.findRaces(newFE, f, visited, 0)
 				}
 			} else {
-				if f.int > 0 {
-					//connectTo = append(connectTo, f)
-				}
 				if f.write {
 					newFrontier = append(newFrontier, f)
 				}
@@ -114,13 +109,11 @@ func (l *ListenerDataAccessWCP) Put(p *util.SyncPair) {
 		//write-read sync
 		if varstate.lwDot != nil {
 			t1.vc = t1.vc.ssync(varstate.lastWrite) //Th(i) = max(Th(i),L W (x))
-
-			//update rel for each owned lock to contain the wrds that occurred in the current critical sections
-			// for _, lk := range t1.ls {
-			// 	lock := locks[lk]
-			// 	lock.rel = lock.rel.ssync(varstate.lastWrite)
-			// 	locks[lk] = lock
-			// }
+			for _, l := range t1.ls {
+				lk := locks[l]
+				lk.rel = lk.rel.ssync(varstate.lastWrite)
+				locks[l] = lk
+			}
 		}
 
 		for _, l := range t1.ls {
@@ -133,7 +126,7 @@ func (l *ListenerDataAccessWCP) Put(p *util.SyncPair) {
 
 				//read event is ordered within previous critical section
 				if h.acq.v < localTimeForLastOwner && localTimeForLastOwner < relTimeForLastOwner {
-					t1.vc = t1.vc.ssync(h.rel)
+					t1.vc = t1.vc.ssync(h.relhb)
 				}
 
 				if !(relTimeForLastOwner < localTimeForLastOwner) {
@@ -143,18 +136,9 @@ func (l *ListenerDataAccessWCP) Put(p *util.SyncPair) {
 			t1.csHistory[l] = nhistory
 		}
 
-		//varstate.updateGraph3(newFE, connectTo)
-
 		newFrontier = append(newFrontier, newFE) // ∪{i#Th(i)[i]}
 		varstate.frontier = newFrontier
 
-		//connect to artifical start dot if no connection exists
-
-		// list, ok := varstate.graph.get(newFE.int)
-		// if ok && len(list) == 0 {
-		// 	list = append(list, &startDot)
-		// 	varstate.graph.add(newFE, list)
-		// }
 	} else { //volatile synchronize
 		vol, ok := volatiles[p.T2]
 		if !ok {
@@ -171,7 +155,7 @@ func (l *ListenerDataAccessWCP) Put(p *util.SyncPair) {
 	variables[p.T2] = varstate
 }
 
-func (l *ListenerAsyncRcvWCP) Put(p *util.SyncPair) {
+func (l *ListenerAsyncRcvWCPHBC) Put(p *util.SyncPair) {
 	if !p.AsyncRcv {
 		return
 	}
@@ -190,50 +174,35 @@ func (l *ListenerAsyncRcvWCP) Put(p *util.SyncPair) {
 		lock = newL()
 	}
 
-	//lock.hb = lock.hb.ssync(t1.vc)
-
 	if len(t1.ls) > 0 { //remove lock from lockset
 		t1.ls = t1.ls[:len(t1.ls)-1]
 	}
 
-	nPair := vcPair{owner: p.T1, acq: lock.acq, rel: t1.vc.clone()}
+	nPair := vcPair{owner: p.T1, acq: lock.acq, rel: t1.vc.clone(),
+		relhb: t1.vc.clone().ssync(t1.hb)}
 	//lock.history = append(lock.history, nPair)
 	lock.history = lock.history.add(nPair)
 	for _, t := range threads {
 		if t.id != p.T1 {
+			// cshist := t.csHistory[p.T2]
+			// cshist = append(cshist, nPair)
+			// t.csHistory[p.T2] = cshist
 			cshist := t.csHistory[p.T2]
 			cshist = cshist.add(nPair)
 			//cshist = append(cshist, nPair)
 			t.csHistory[p.T2] = cshist
 		}
 	}
-	// cshist := csHistory[p.T2]
-	// cshist = append(cshist, nPair)
-	// csHistory[p.T2] = cshist
 
 	lock.count++
-
-	// if len(lockClues) > 0 {
-	// 	for k, t := range threads {
-	// 		if k != p.T1 {
-	// 			list, ok := t.csHistory[p.T2]
-	// 			if !ok {
-	// 				list = make([]vcPair, 0)
-	// 			}
-	// 			list = append(list, lock.history[lock.count])
-	// 			t.csHistory[p.T2] = list
-	// 		}
-	// 	}
-	// }
-
-	lock.count++
+	lock.hb = lock.hb.ssync(t1.vc)
 
 	t1.vc = t1.vc.add(p.T1, 1)
 	threads[p.T1] = t1
 	locks[p.T2] = lock
 }
 
-func (l *ListenerAsyncSndWCP) Put(p *util.SyncPair) {
+func (l *ListenerAsyncSndWCPHBC) Put(p *util.SyncPair) {
 	if !p.AsyncSend {
 		return
 	}
@@ -254,6 +223,7 @@ func (l *ListenerAsyncSndWCP) Put(p *util.SyncPair) {
 
 	//t1.ls[p.T2] = struct{}{} //inlcude lock to lockset
 	t1.ls = append(t1.ls, p.T2)
+	t1.vc = t1.vc.ssync(lock.rel)
 
 	lock.acq = newEpoch(p.T1, t1.vc.get(p.T1))
 
@@ -267,14 +237,16 @@ func (l *ListenerAsyncSndWCP) Put(p *util.SyncPair) {
 		maxMulti = len(t1.ls)
 	}
 
+	t1.hb = t1.hb.ssync(lock.hb)
+
 	t1.vc = t1.vc.add(p.T1, 1)
 	threads[p.T1] = t1
 	locks[p.T2] = lock
 }
 
-type ListenerDataAccessWCPEE struct{}
+type ListenerDataAccessWCPEEHBC struct{}
 
-func (l *ListenerDataAccessWCPEE) Put(p *util.SyncPair) {
+func (l *ListenerDataAccessWCPEEHBC) Put(p *util.SyncPair) {
 	if !p.DataAccess {
 		return
 	}
@@ -314,33 +286,12 @@ func (l *ListenerDataAccessWCPEE) Put(p *util.SyncPair) {
 						report.Location{File: p.Ev.Ops[0].SourceRef, Line: p.Ev.Ops[0].Line, W: true}, false, 0)
 				}
 
-				visited := &bitset.BitSet{}
-				varstate.findRaces(newFE, f, visited, 0)
+				varstate.findRaces(newFE, f, &bitset.BitSet{}, 0)
 
 			} else {
 				connectTo = append(connectTo, f)
 			}
 		}
-
-		// for _, l := range t1.ls {
-		// 	lkHistory := t1.csHistory[l]
-		// 	nhistory := make([]vcPair, 0, len(lkHistory))
-
-		// 	for _, h := range lkHistory {
-		// 		localTimeForLastOwner := t1.vc.get(h.owner)
-		// 		relTimeForLastOwner := h.rel.get(h.owner)
-
-		// 		//read event is ordered within previous critical section
-		// 		if h.acq.v < localTimeForLastOwner && localTimeForLastOwner < relTimeForLastOwner {
-		// 			t1.vc = t1.vc.ssync(h.rel)
-		// 		}
-
-		// 		if !(relTimeForLastOwner < localTimeForLastOwner) {
-		// 			nhistory = append(nhistory, h)
-		// 		}
-		// 	}
-		// 	t1.csHistory[l] = nhistory
-		// }
 
 		varstate.updateGraph3(newFE, connectTo)
 
@@ -366,7 +317,9 @@ func (l *ListenerDataAccessWCPEE) Put(p *util.SyncPair) {
 			varstate.graph.add(newFE, list)
 		}
 	} else if p.Read {
-		newFE.v = newFE.v.ssync(varstate.lastWrite) //sync with last write in advance, necessary for the graph analysis in the following loop!
+		if varstate.lwDot != nil {
+			newFE.v = newFE.v.ssync(varstate.lastWrite) //sync with last write in advance, necessary for the graph analysis in the following loop!
+		}
 
 		for _, f := range varstate.frontier {
 			k := f.v.get(uint32(f.t))          //j#k
@@ -382,8 +335,7 @@ func (l *ListenerDataAccessWCPEE) Put(p *util.SyncPair) {
 							report.Location{File: p.Ev.Ops[0].SourceRef, Line: p.Ev.Ops[0].Line, W: newFE.write}, false, 0)
 					}
 
-					visited := &bitset.BitSet{}
-					varstate.findRaces(newFE, f, visited, 0)
+					varstate.findRaces(newFE, f, &bitset.BitSet{}, 0)
 				}
 			} else {
 				if f.int > 0 {
@@ -396,7 +348,14 @@ func (l *ListenerDataAccessWCPEE) Put(p *util.SyncPair) {
 		}
 
 		//write-read sync
-		t1.vc = t1.vc.ssync(varstate.lastWrite) //Th(i) = max(Th(i),L W (x))
+		if varstate.lwDot != nil {
+			t1.vc = t1.vc.ssync(varstate.lastWrite) //Th(i) = max(Th(i),L W (x))
+			for _, l := range t1.ls {
+				lk := locks[l]
+				lk.rel = lk.rel.ssync(varstate.lastWrite)
+				locks[l] = lk
+			}
+		}
 
 		for _, l := range t1.ls {
 			lkHistory := t1.csHistory[l]
@@ -408,7 +367,7 @@ func (l *ListenerDataAccessWCPEE) Put(p *util.SyncPair) {
 
 				//read event is ordered within previous critical section
 				if h.acq.v < localTimeForLastOwner && localTimeForLastOwner < relTimeForLastOwner {
-					t1.vc = t1.vc.ssync(h.rel)
+					t1.vc = t1.vc.ssync(h.relhb)
 				}
 
 				if !(relTimeForLastOwner < localTimeForLastOwner) {
