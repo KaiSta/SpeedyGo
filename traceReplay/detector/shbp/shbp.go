@@ -42,57 +42,57 @@ func Init() {
 	volatiles = make(map[uint32]vcepoch)
 	notifies = make(map[uint32]vcepoch)
 
-	listeners1 := []traceReplay.EventListener{
-		&ListenerAsyncSnd{},
-		&ListenerAsyncRcv{},
-		&ListenerSync{},
-		&ListenerDataAccessSHB{},
-		&ListenerGoFork{},
-		&ListenerGoWait{},
-		&ListenerNT{},
-		&ListenerNTWT{},
-		&ListenerPostProcess{},
-	}
-	algos.RegisterDetector("shbp", &EventCollector{listeners1})
+	// listeners1 := []traceReplay.EventListener{
+	// 	&ListenerAsyncSnd{},
+	// 	&ListenerAsyncRcv{},
+	// 	&ListenerSync{},
+	// 	&ListenerDataAccessSHB{},
+	// 	&ListenerGoFork{},
+	// 	&ListenerGoWait{},
+	// 	&ListenerNT{},
+	// 	&ListenerNTWT{},
+	// 	&ListenerPostProcess{},
+	// }
+	// algos.RegisterDetector("shbp", &EventCollector{listeners1})
 
-	algos.RegisterDetector("shbpNOLS", &EventCollector{[]traceReplay.EventListener{
-		&ListenerAsyncSnd{},
-		&ListenerAsyncRcv{},
-		&ListenerSync{},
-		&ListenerDataAccessSHBNOLS{},
-		&ListenerGoFork{},
-		&ListenerGoWait{},
-		&ListenerNT{},
-		&ListenerNTWT{},
-		&ListenerPostProcess{},
-	}})
+	// algos.RegisterDetector("shbpNOLS", &EventCollector{[]traceReplay.EventListener{
+	// 	&ListenerAsyncSnd{},
+	// 	&ListenerAsyncRcv{},
+	// 	&ListenerSync{},
+	// 	&ListenerDataAccessSHBNOLS{},
+	// 	&ListenerGoFork{},
+	// 	&ListenerGoWait{},
+	// 	&ListenerNT{},
+	// 	&ListenerNTWT{},
+	// 	&ListenerPostProcess{},
+	// }})
 
-	//algos.RegisterDetector("mfshbee", &EventCollector{listeners1})
+	// //algos.RegisterDetector("mfshbee", &EventCollector{listeners1})
 
-	listeners2 := []traceReplay.EventListener{
-		&ListenerAsyncSnd{},
-		&ListenerAsyncRcv{},
-		&ListenerSync{},
-		&ListenerDataAccessHB{},
-		&ListenerGoFork{},
-		&ListenerGoWait{},
-		&ListenerNT{},
-		&ListenerNTWT{},
-		&ListenerPostProcess{},
-	}
-	algos.RegisterDetector("hbp", &EventCollector{listeners2})
+	// listeners2 := []traceReplay.EventListener{
+	// 	&ListenerAsyncSnd{},
+	// 	&ListenerAsyncRcv{},
+	// 	&ListenerSync{},
+	// 	&ListenerDataAccessHB{},
+	// 	&ListenerGoFork{},
+	// 	&ListenerGoWait{},
+	// 	&ListenerNT{},
+	// 	&ListenerNTWT{},
+	// 	&ListenerPostProcess{},
+	// }
+	// algos.RegisterDetector("hbp", &EventCollector{listeners2})
 
-	algos.RegisterDetector("hbpNOLS", &EventCollector{[]traceReplay.EventListener{
-		&ListenerAsyncSnd{},
-		&ListenerAsyncRcv{},
-		&ListenerSync{},
-		&ListenerDataAccessHBNOLS{},
-		&ListenerGoFork{},
-		&ListenerGoWait{},
-		&ListenerNT{},
-		&ListenerNTWT{},
-		&ListenerPostProcess{},
-	}})
+	// algos.RegisterDetector("hbpNOLS", &EventCollector{[]traceReplay.EventListener{
+	// 	&ListenerAsyncSnd{},
+	// 	&ListenerAsyncRcv{},
+	// 	&ListenerSync{},
+	// 	&ListenerDataAccessHBNOLS{},
+	// 	&ListenerGoFork{},
+	// 	&ListenerGoWait{},
+	// 	&ListenerNT{},
+	// 	&ListenerNTWT{},
+	// 	&ListenerPostProcess{},
+	// }})
 
 	listenershbdef := []traceReplay.EventListener{
 		&ListenerAsyncSnd{},
@@ -105,33 +105,33 @@ func Init() {
 		&ListenerNTWT{},
 		&ListenerPostProcess{},
 	}
-	algos.RegisterDetector("hbDefault", &EventCollector{listenershbdef})
+	algos.RegisterDetector("fasttrack", &EventCollector{listenershbdef})
 
-	listeners3 := []traceReplay.EventListener{
-		&ListenerAsyncSnd{},
-		&ListenerAsyncRcv{},
-		&ListenerSync{},
-		&ListenerDataAccessSHBSingle{},
-		&ListenerGoFork{},
-		&ListenerGoWait{},
-		&ListenerNT{},
-		&ListenerNTWT{},
-		&ListenerPostProcess{},
-	}
-	algos.RegisterDetector("shbpSingle", &EventCollector{listeners3})
+	// listeners3 := []traceReplay.EventListener{
+	// 	&ListenerAsyncSnd{},
+	// 	&ListenerAsyncRcv{},
+	// 	&ListenerSync{},
+	// 	&ListenerDataAccessSHBSingle{},
+	// 	&ListenerGoFork{},
+	// 	&ListenerGoWait{},
+	// 	&ListenerNT{},
+	// 	&ListenerNTWT{},
+	// 	&ListenerPostProcess{},
+	// }
+	// algos.RegisterDetector("shbpSingle", &EventCollector{listeners3})
 
-	listeners4 := []traceReplay.EventListener{
-		&ListenerAsyncSnd{},
-		&ListenerAsyncRcv{},
-		&ListenerSync{},
-		&ListenerDataAccessSHBWrites{},
-		&ListenerGoFork{},
-		&ListenerGoWait{},
-		&ListenerNT{},
-		&ListenerNTWT{},
-		&ListenerPostProcess{},
-	}
-	algos.RegisterDetector("shbpWrites", &EventCollector{listeners4})
+	// listeners4 := []traceReplay.EventListener{
+	// 	&ListenerAsyncSnd{},
+	// 	&ListenerAsyncRcv{},
+	// 	&ListenerSync{},
+	// 	&ListenerDataAccessSHBWrites{},
+	// 	&ListenerGoFork{},
+	// 	&ListenerGoWait{},
+	// 	&ListenerNT{},
+	// 	&ListenerNTWT{},
+	// 	&ListenerPostProcess{},
+	// }
+	// algos.RegisterDetector("shbpWrites", &EventCollector{listeners4})
 
 	listeners5 := []traceReplay.EventListener{
 		&ListenerAsyncSnd{},
@@ -144,7 +144,7 @@ func Init() {
 		&ListenerNTWT{},
 		&ListenerPostProcess{},
 	}
-	algos.RegisterDetector("shbDefault", &EventCollector{listeners5})
+	algos.RegisterDetector("shb", &EventCollector{listeners5})
 
 }
 

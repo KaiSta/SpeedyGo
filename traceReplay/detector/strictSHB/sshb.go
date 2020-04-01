@@ -58,56 +58,56 @@ func Init() {
 	}
 	algos.RegisterDetector("sshb", &EventCollector{listeners1})
 
-	listenersALL := []traceReplay.EventListener{
-		&ListenerAsyncSnd{},
-		&ListenerAsyncRcv{},
-		&ListenerSync{},
-		&ListenerDataAccessALL{},
-		&ListenerGoFork{},
-		&ListenerGoWait{},
-		&ListenerNT{},
-		&ListenerNTWT{},
-		&ListenerPostProcessALL{},
-	}
-	algos.RegisterDetector("sshbALL", &EventCollector{listenersALL})
+	// listenersALL := []traceReplay.EventListener{
+	// 	&ListenerAsyncSnd{},
+	// 	&ListenerAsyncRcv{},
+	// 	&ListenerSync{},
+	// 	&ListenerDataAccessALL{},
+	// 	&ListenerGoFork{},
+	// 	&ListenerGoWait{},
+	// 	&ListenerNT{},
+	// 	&ListenerNTWT{},
+	// 	&ListenerPostProcessALL{},
+	// }
+	// algos.RegisterDetector("sshbALL", &EventCollector{listenersALL})
 
-	listenersALLPara := []traceReplay.EventListener{
-		&ListenerAsyncSnd{},
-		&ListenerAsyncRcv{},
-		&ListenerSync{},
-		&ListenerDataAccessALL{},
-		&ListenerGoFork{},
-		&ListenerGoWait{},
-		&ListenerNT{},
-		&ListenerNTWT{},
-		&ListenerPostProcessPara{},
-	}
-	algos.RegisterDetector("sshbALLPARA", &EventCollector{listenersALLPara})
+	// listenersALLPara := []traceReplay.EventListener{
+	// 	&ListenerAsyncSnd{},
+	// 	&ListenerAsyncRcv{},
+	// 	&ListenerSync{},
+	// 	&ListenerDataAccessALL{},
+	// 	&ListenerGoFork{},
+	// 	&ListenerGoWait{},
+	// 	&ListenerNT{},
+	// 	&ListenerNTWT{},
+	// 	&ListenerPostProcessPara{},
+	// }
+	// algos.RegisterDetector("sshbALLPARA", &EventCollector{listenersALLPara})
 
-	listeners2 := []traceReplay.EventListener{
-		&ListenerAsyncSnd{},
-		&ListenerAsyncRcv{},
-		&ListenerSync{},
-		&ListenerDataAccess{},
-		&ListenerGoFork{},
-		&ListenerGoWait{},
-		&ListenerNT{},
-		&ListenerNTWT{},
-		&ListenerPostProcessLarge{},
-	}
-	algos.RegisterDetector("sshbLarge", &EventCollector{listeners2})
+	// listeners2 := []traceReplay.EventListener{
+	// 	&ListenerAsyncSnd{},
+	// 	&ListenerAsyncRcv{},
+	// 	&ListenerSync{},
+	// 	&ListenerDataAccess{},
+	// 	&ListenerGoFork{},
+	// 	&ListenerGoWait{},
+	// 	&ListenerNT{},
+	// 	&ListenerNTWT{},
+	// 	&ListenerPostProcessLarge{},
+	// }
+	// algos.RegisterDetector("sshbLarge", &EventCollector{listeners2})
 
-	algos.RegisterDetector("sshbFixer", &EventCollector{[]traceReplay.EventListener{
-		&ListenerAsyncSnd{},
-		&ListenerAsyncRcv{},
-		&ListenerSync{},
-		&ListenerDataAccessFixer{},
-		&ListenerGoFork{},
-		&ListenerGoWait{},
-		&ListenerNT{},
-		&ListenerNTWT{},
-		&ListenerPostProcessFIX{},
-	}})
+	// algos.RegisterDetector("sshbFixer", &EventCollector{[]traceReplay.EventListener{
+	// 	&ListenerAsyncSnd{},
+	// 	&ListenerAsyncRcv{},
+	// 	&ListenerSync{},
+	// 	&ListenerDataAccessFixer{},
+	// 	&ListenerGoFork{},
+	// 	&ListenerGoWait{},
+	// 	&ListenerNT{},
+	// 	&ListenerNTWT{},
+	// 	&ListenerPostProcessFIX{},
+	// }})
 }
 
 var threads map[uint32]thread

@@ -79,7 +79,7 @@ func Init() {
 	}
 
 	algos.RegisterDetector("shbee", &EventCollector{listeners, false, 0})
-	algos.RegisterDetector("shbeeW", &EventCollector{listeners, true, 0})
+	algos.RegisterDetector("shbeeWindow", &EventCollector{listeners, true, 0})
 
 	listeners2 := []traceReplay.EventListener{
 		&ListenerAsyncSnd{},

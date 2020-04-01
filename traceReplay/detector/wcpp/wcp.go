@@ -55,17 +55,17 @@ func Init() {
 	global_acqll = make(map[uint32][]vcepoch)
 	global_rell = make(map[uint32][]vcepoch)
 
-	listeners := []traceReplay.EventListener{
-		&ListenerAsyncSnd{},
-		&ListenerAsyncRcv{},
-		&ListenerDataAccess{},
-		&ListenerGoFork{},
-		&ListenerGoWait{},
-		&ListenerNT{},
-		&ListenerNTWT{},
-		&ListenerPostProcess{},
-	}
-	algos.RegisterDetector("wcpp", &EventCollector{listeners})
+	// listeners := []traceReplay.EventListener{
+	// 	&ListenerAsyncSnd{},
+	// 	&ListenerAsyncRcv{},
+	// 	&ListenerDataAccess{},
+	// 	&ListenerGoFork{},
+	// 	&ListenerGoWait{},
+	// 	&ListenerNT{},
+	// 	&ListenerNTWT{},
+	// 	&ListenerPostProcess{},
+	// }
+	// algos.RegisterDetector("wcpp", &EventCollector{listeners})
 
 	listeners2 := []traceReplay.EventListener{
 		&ListenerAsyncSnd{},
@@ -77,19 +77,19 @@ func Init() {
 		&ListenerNTWT{},
 		&ListenerPostProcess{},
 	}
-	algos.RegisterDetector("wcpDefault", &EventCollector{listeners2})
+	algos.RegisterDetector("wcp", &EventCollector{listeners2})
 
-	listeners3 := []traceReplay.EventListener{
-		&ListenerAsyncSnd{},
-		&ListenerAsyncRcv{},
-		&ListenerDataAccessDefaultWRD{},
-		&ListenerGoFork{},
-		&ListenerGoWait{},
-		&ListenerNT{},
-		&ListenerNTWT{},
-		&ListenerPostProcess{},
-	}
-	algos.RegisterDetector("wcpDefaultWRD", &EventCollector{listeners3})
+	// listeners3 := []traceReplay.EventListener{
+	// 	&ListenerAsyncSnd{},
+	// 	&ListenerAsyncRcv{},
+	// 	&ListenerDataAccessDefaultWRD{},
+	// 	&ListenerGoFork{},
+	// 	&ListenerGoWait{},
+	// 	&ListenerNT{},
+	// 	&ListenerNTWT{},
+	// 	&ListenerPostProcess{},
+	// }
+	// algos.RegisterDetector("wcpDefaultWRD", &EventCollector{listeners3})
 }
 
 var threads map[uint32]*thread

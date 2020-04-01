@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"../../util"
-	algos "../analysis"
 	"../report"
 	"../traceReplay"
 )
@@ -37,44 +36,44 @@ func Init() {
 	volatiles = make(map[uint32]vcepoch)
 	notifies = make(map[uint32]vcepoch)
 
-	listeners1 := []traceReplay.EventListener{
-		&ListenerAsyncSnd{},
-		&ListenerAsyncRcv{},
-		&ListenerSync{},
-		&ListenerDataAccessNoOp{},
-		&ListenerGoFork{},
-		&ListenerGoWait{},
-		&ListenerNT{},
-		&ListenerNTWT{},
-		&ListenerPostProcess{},
-	}
-	algos.RegisterDetector("shb+", &EventCollector{listeners1})
+	// listeners1 := []traceReplay.EventListener{
+	// 	&ListenerAsyncSnd{},
+	// 	&ListenerAsyncRcv{},
+	// 	&ListenerSync{},
+	// 	&ListenerDataAccessNoOp{},
+	// 	&ListenerGoFork{},
+	// 	&ListenerGoWait{},
+	// 	&ListenerNT{},
+	// 	&ListenerNTWT{},
+	// 	&ListenerPostProcess{},
+	// }
+	// algos.RegisterDetector("shb+", &EventCollector{listeners1})
 
-	listeners2 := []traceReplay.EventListener{
-		&ListenerAsyncSnd{},
-		&ListenerAsyncRcv{},
-		&ListenerSync{},
-		&ListenerDataAccessOp{},
-		&ListenerGoFork{},
-		&ListenerGoWait{},
-		&ListenerNT{},
-		&ListenerNTWT{},
-		//&ListenerPostProcess2{},
-	}
-	algos.RegisterDetector("shb", &EventCollector{listeners2})
+	// listeners2 := []traceReplay.EventListener{
+	// 	&ListenerAsyncSnd{},
+	// 	&ListenerAsyncRcv{},
+	// 	&ListenerSync{},
+	// 	&ListenerDataAccessOp{},
+	// 	&ListenerGoFork{},
+	// 	&ListenerGoWait{},
+	// 	&ListenerNT{},
+	// 	&ListenerNTWT{},
+	// 	//&ListenerPostProcess2{},
+	// }
+	// algos.RegisterDetector("shb", &EventCollector{listeners2})
 
-	listeners3 := []traceReplay.EventListener{
-		&ListenerAsyncSnd{},
-		&ListenerAsyncRcv{},
-		&ListenerSync{},
-		&ListenerDataAccessNoOp{},
-		&ListenerGoFork{},
-		&ListenerGoWait{},
-		&ListenerNT{},
-		&ListenerNTWT{},
-		&ListenerPostProcess2{},
-	}
-	algos.RegisterDetector("shb*", &EventCollector{listeners3})
+	// listeners3 := []traceReplay.EventListener{
+	// 	&ListenerAsyncSnd{},
+	// 	&ListenerAsyncRcv{},
+	// 	&ListenerSync{},
+	// 	&ListenerDataAccessNoOp{},
+	// 	&ListenerGoFork{},
+	// 	&ListenerGoWait{},
+	// 	&ListenerNT{},
+	// 	&ListenerNTWT{},
+	// 	&ListenerPostProcess2{},
+	// }
+	// algos.RegisterDetector("shb*", &EventCollector{listeners3})
 }
 
 var threads map[uint32]thread
