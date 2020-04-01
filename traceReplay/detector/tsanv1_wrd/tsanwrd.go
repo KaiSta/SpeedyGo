@@ -56,7 +56,7 @@ func Init() {
 	csHistory = make(map[uint32][]vcPair)
 	lockClues = make(map[uint32][][]int)
 
-	algos.RegisterDetector("tsanE", &EventCollector{[]traceReplay.EventListener{
+	algos.RegisterDetector("polockset", &EventCollector{[]traceReplay.EventListener{
 		&ListenerAsyncSnd{},
 		&ListenerAsyncRcv{},
 		&ListenerDataAccess{},
@@ -67,7 +67,7 @@ func Init() {
 		&ListenerPostProcess{},
 	}, nil, 2})
 
-	algos.RegisterDetector("tsanEWRD", &EventCollector{[]traceReplay.EventListener{
+	algos.RegisterDetector("powrdlockset", &EventCollector{[]traceReplay.EventListener{
 		&ListenerAsyncSnd{},
 		&ListenerAsyncRcv{},
 		//	&ListenerDataAccess{},
@@ -79,7 +79,7 @@ func Init() {
 		&ListenerPostProcess{},
 	}, nil, 2})
 
-	algos.RegisterDetector("tsanEWCP", &EventCollector{[]traceReplay.EventListener{
+	algos.RegisterDetector("w3po", &EventCollector{[]traceReplay.EventListener{
 		&ListenerAsyncSndWCP{},
 		&ListenerAsyncRcvWCP{},
 		&ListenerDataAccessWCP{},
@@ -90,7 +90,7 @@ func Init() {
 		&ListenerPostProcess{},
 	}, nil, 2})
 
-	algos.RegisterDetector("tsanEHBC", &EventCollector{[]traceReplay.EventListener{
+	algos.RegisterDetector("w3hbc", &EventCollector{[]traceReplay.EventListener{
 		&ListenerAsyncSndWCPHBC{},
 		&ListenerAsyncRcvWCPHBC{},
 		&ListenerDataAccessWCPHBC{},
@@ -101,7 +101,7 @@ func Init() {
 		&ListenerPostProcess{},
 	}, nil, 2})
 
-	algos.RegisterDetector("tsanEW1", &EventCollector{[]traceReplay.EventListener{
+	algos.RegisterDetector("w3s", &EventCollector{[]traceReplay.EventListener{
 		&ListenerAsyncSndW1P2{},
 		&ListenerAsyncRcvW1P2{},
 		//	&ListenerDataAccess{},
@@ -122,7 +122,7 @@ func Init() {
 		&ListenerPostProcessW1P1{},
 	}, 1})
 
-	algos.RegisterDetector("tsanEE", &EventCollector{[]traceReplay.EventListener{
+	algos.RegisterDetector("polocksetEE", &EventCollector{[]traceReplay.EventListener{
 		&ListenerAsyncSnd{},
 		&ListenerAsyncRcv{},
 		&ListenerDataAccessEE{},
@@ -133,7 +133,7 @@ func Init() {
 		&ListenerPostProcess{},
 	}, nil, 2})
 
-	algos.RegisterDetector("tsanEEWRD", &EventCollector{[]traceReplay.EventListener{
+	algos.RegisterDetector("powrdlocksetEE", &EventCollector{[]traceReplay.EventListener{
 		&ListenerAsyncSnd{},
 		&ListenerAsyncRcv{},
 		&ListenerDataAccessWRDEE{},
@@ -144,7 +144,7 @@ func Init() {
 		&ListenerPostProcess{},
 	}, nil, 2})
 
-	algos.RegisterDetector("tsanEEWCP", &EventCollector{[]traceReplay.EventListener{
+	algos.RegisterDetector("w3poEE", &EventCollector{[]traceReplay.EventListener{
 		&ListenerAsyncSndWCP{},
 		&ListenerAsyncRcvWCP{},
 		&ListenerDataAccessWCPEE{},
@@ -155,7 +155,7 @@ func Init() {
 		&ListenerPostProcess{},
 	}, nil, 2})
 
-	algos.RegisterDetector("tsanEEW1", &EventCollector{[]traceReplay.EventListener{
+	algos.RegisterDetector("w3sEE", &EventCollector{[]traceReplay.EventListener{
 		&ListenerAsyncSndW1P2{},
 		&ListenerAsyncRcvW1P2{},
 		&ListenerDataAccessWRDEE{},
@@ -175,7 +175,7 @@ func Init() {
 		&ListenerPostProcessW1P1{},
 	}, 1})
 
-	algos.RegisterDetector("tsanEEHBC", &EventCollector{[]traceReplay.EventListener{
+	algos.RegisterDetector("w3hbcEE", &EventCollector{[]traceReplay.EventListener{
 		&ListenerAsyncSndWCPHBC{},
 		&ListenerAsyncRcvWCPHBC{},
 		&ListenerDataAccessWCPEEHBC{},
