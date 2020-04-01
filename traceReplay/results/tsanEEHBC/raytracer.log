@@ -1,0 +1,26 @@
+Parsing trace...
+Trace path: E:\traces\raytracer.log <nil>
+Parsing trace complete!
+5000/?10000/?15000/?20000/?25000/?30000/?35000/?40000/?45000/?50000/?55000/?60000/?65000/?70000/?75000/?80000/?85000/?90000/?95000/?100000/?105000/?110000/?115000/?120000/?125000/?130000/?135000/?140000/?145000/?150000/?155000/?160000/?165000/?170000/?175000/?180000/?185000/?190000/?195000/?200000/?205000/?210000/?215000/?RACE:JGFRayTracerBench.java:175, JGFRayTracerBench.java:175
+ALL:1/1
+WRDRaces:0
+WWRACES: 0 WRRACES: 1 RWRACES: 0
+220000/?Phase1 Time: 170.0382ms
+Multilock: 0
+SingleLock: 26
+MaxMulti: 1
+PostProcessing Time: 0s
+Reads:0
+Writes:0
+Read-Read-Races:0/0
+Read-Write-Races:0/0
+Write-Read-Races:0/0
+Write-Write-Race:1/1
+Write-Read-Deps:0
+Write-Read-Dep-Races:0/0
+ALL:1/1
+Missing Edge Cases: 0
+Free Counter: 0
+Phase1:1/0
+Phase2:0/0
+Complete Time: 170.0382ms

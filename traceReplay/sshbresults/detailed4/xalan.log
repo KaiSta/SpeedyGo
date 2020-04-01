@@ -1,0 +1,272 @@
+Parsing trace...
+Trace path: E:\traces\xalanFull.log <nil>
+Parsing trace complete!
+Item count before: 62886984
+All variables: 3224878
+Shared variables: 9707
+Item count after: 7371911
+RACE:OutputPropertiesFactory.java:286, OutputPropertiesFactory.java:289
+false true
+ALL:1/1
+WRDRaces:0
+WWRACES: 0 WRRACES: 0 RWRACES: 1
+RACE:OutputPropertiesFactory.java:301, OutputPropertiesFactory.java:289
+false true
+ALL:2/13
+WRDRaces:0
+WWRACES: 0 WRRACES: 0 RWRACES: 2
+RACE:OutputPropertiesFactory.java:289, OutputPropertiesFactory.java:289
+true true
+ALL:3/16
+WRDRaces:0
+WWRACES: 1 WRRACES: 0 RWRACES: 2
+RACE:XMLStringFactoryImpl.java:34, XMLStringFactoryImpl.java:45
+true false
+ALL:4/247
+WRDRaces:0
+WWRACES: 1 WRRACES: 1 RWRACES: 2
+RACE:DTMManager.java:56, DTMManager.java:137
+true false
+ALL:5/254
+WRDRaces:0
+WWRACES: 1 WRRACES: 2 RWRACES: 2
+RACE:ObjectFactory.java:77, ObjectFactory.java:299
+true false
+ALL:6/268
+WRDRaces:0
+WWRACES: 1 WRRACES: 3 RWRACES: 2
+RACE:ObjectFactory.java:70, ObjectFactory.java:342
+true false
+ALL:7/269
+WRDRaces:0
+WWRACES: 1 WRRACES: 4 RWRACES: 2
+RACE:IntVector.java:70, XPathContext.java:350
+true true
+ALL:8/273
+WRDRaces:0
+WWRACES: 2 WRRACES: 4 RWRACES: 2
+RACE:IntVector.java:70, XPathContext.java:352
+true false
+ALL:9/274
+WRDRaces:0
+WWRACES: 2 WRRACES: 5 RWRACES: 2
+RACE:XPathContext.java:350, IntStack.java:86
+true false
+ALL:10/275
+WRDRaces:0
+WWRACES: 2 WRRACES: 6 RWRACES: 2
+RACE:StackGuard.java:46, StackGuard.java:46
+true true
+ALL:11/276
+WRDRaces:0
+WWRACES: 3 WRRACES: 6 RWRACES: 2
+RACE:ToStream.java:97, ToStream.java:97
+true true
+ALL:12/277
+WRDRaces:0
+WWRACES: 4 WRRACES: 6 RWRACES: 2
+RACE:ToStream.java:171, ToStream.java:171
+true true
+ALL:13/278
+WRDRaces:0
+WWRACES: 5 WRRACES: 6 RWRACES: 2
+RACE:CharInfo.java:565, CharInfo.java:491
+true false
+ALL:14/279
+WRDRaces:0
+WWRACES: 5 WRRACES: 7 RWRACES: 2
+RACE:ToHTMLStream.java:2097, ToHTMLStream.java:2347
+true false
+ALL:15/293
+WRDRaces:0
+WWRACES: 5 WRRACES: 8 RWRACES: 2
+RACE:CharInfo.java:613, CharInfo.java:541
+true false
+ALL:16/294
+WRDRaces:0
+WWRACES: 5 WRRACES: 9 RWRACES: 2
+RACE:CharInfo.java:177, CharInfo.java:551
+true false
+ALL:17/295
+WRDRaces:0
+WWRACES: 5 WRRACES: 10 RWRACES: 2
+RACE:CharInfo.java:759, CharInfo.java:790
+true false
+ALL:18/296
+WRDRaces:0
+WWRACES: 5 WRRACES: 11 RWRACES: 2
+RACE:CharInfo.java:318, CharInfo.java:553
+true false
+ALL:19/1039
+WRDRaces:0
+WWRACES: 5 WRRACES: 12 RWRACES: 2
+RACE:SAX2DTM.java:123, DTMTreeWalker.java:196
+true true
+ALL:20/1172
+WRDRaces:0
+WWRACES: 6 WRRACES: 12 RWRACES: 2
+RACE:SAX2DTM.java:137, SAX2DTM.java:194
+true true
+ALL:21/1173
+WRDRaces:0
+WWRACES: 7 WRRACES: 12 RWRACES: 2
+RACE:DTMStringPool.java:61, DTMStringPool.java:61
+true true
+ALL:22/1174
+WRDRaces:0
+WWRACES: 8 WRRACES: 12 RWRACES: 2
+RACE:DTMStringPool.java:61, DTMStringPool.java:89
+true false
+ALL:23/1175
+WRDRaces:0
+WWRACES: 8 WRRACES: 13 RWRACES: 2
+RACE:SAX2DTM.java:137, SAX2DTM.java:287
+true true
+ALL:24/1303
+WRDRaces:0
+WWRACES: 9 WRRACES: 13 RWRACES: 2
+RACE:SAX2DTM.java:137, SAX2DTM.java:288
+true false
+ALL:25/1359
+WRDRaces:0
+WWRACES: 9 WRRACES: 14 RWRACES: 2
+RACE:SAX2DTM.java:137, SAX2DTM.java:289
+true false
+ALL:26/1360
+WRDRaces:0
+WWRACES: 9 WRRACES: 15 RWRACES: 2
+RACE:SAX2DTM.java:137, SAX2DTM.java:290
+true false
+ALL:27/1361
+WRDRaces:0
+WWRACES: 9 WRRACES: 16 RWRACES: 2
+RACE:DTMStringPool.java:61, DTMStringPool.java:113
+true false
+ALL:28/1371
+WRDRaces:0
+WWRACES: 9 WRRACES: 17 RWRACES: 2
+RACE:DTMStringPool.java:61, DTMStringPool.java:130
+true false
+ALL:29/1372
+WRDRaces:0
+WWRACES: 9 WRRACES: 18 RWRACES: 2
+RACE:DTMTreeWalker.java:196, SAX2DTM.java:1677
+true true
+ALL:30/1384
+WRDRaces:0
+WWRACES: 10 WRRACES: 18 RWRACES: 2
+RACE:SAX2DTM.java:137, SAX2DTM.java:894
+true false
+ALL:31/1386
+WRDRaces:0
+WWRACES: 10 WRRACES: 19 RWRACES: 2
+RACE:XUnresolvedVariable.java:83, SuballocatedIntVector.java:151
+true true
+ALL:32/1419
+WRDRaces:0
+WWRACES: 11 WRRACES: 19 RWRACES: 2
+RACE:SAX2DTM.java:287, SAX2DTM.java:1729
+true true
+ALL:33/1829
+WRDRaces:0
+WWRACES: 12 WRRACES: 19 RWRACES: 2
+RACE:SAX2DTM.java:894, SAX2DTM.java:1729
+false true
+ALL:34/1830
+WRDRaces:0
+WWRACES: 12 WRRACES: 19 RWRACES: 3
+RACE:SAX2DTM.java:1729, SAX2DTM.java:894
+true false
+ALL:35/1831
+WRDRaces:0
+WWRACES: 12 WRRACES: 20 RWRACES: 3
+RACE:SAX2DTM.java:287, SAX2DTM.java:1373
+true false
+ALL:36/1976
+WRDRaces:0
+WWRACES: 12 WRRACES: 21 RWRACES: 3
+368596/7371911RACE:Lexer.java:114, NodeSequence.java:66
+true false
+ALL:37/1982
+WRDRaces:0
+WWRACES: 12 WRRACES: 22 RWRACES: 3
+RACE:NodeSequence.java:66, Lexer.java:416
+false true
+ALL:38/1984
+WRDRaces:0
+WWRACES: 12 WRRACES: 22 RWRACES: 4
+RACE:ToStream.java:1525, SuballocatedIntVector.java:151
+false true
+ALL:39/1985
+WRDRaces:0
+WWRACES: 12 WRRACES: 22 RWRACES: 5
+RACE:ToStream.java:1525, SuballocatedIntVector.java:390
+false true
+ALL:40/1986
+WRDRaces:0
+WWRACES: 12 WRRACES: 22 RWRACES: 6
+737192/7371911RACE:ToStream.java:1525, SuballocatedIntVector.java:174
+false true
+ALL:41/1987
+WRDRaces:0
+WWRACES: 12 WRRACES: 22 RWRACES: 7
+1105788/7371911RACE:ToStream.java:1525, NodeSequence.java:137
+false true
+ALL:42/1988
+WRDRaces:0
+WWRACES: 12 WRRACES: 22 RWRACES: 8
+1474384/7371911RACE:ToStream.java:1525, SerializerBase.java:1658
+false true
+ALL:43/1989
+WRDRaces:0
+WWRACES: 12 WRRACES: 22 RWRACES: 9
+1842980/73719112211576/73719112580172/73719112948768/73719113317364/73719113685960/7371911RACE:SuballocatedIntVector.java:151, ObjectVector.java:316
+true false
+ALL:44/1990
+WRDRaces:0
+WWRACES: 12 WRRACES: 23 RWRACES: 9
+RACE:ObjectVector.java:316, SuballocatedIntVector.java:407
+false true
+ALL:45/1991
+WRDRaces:0
+WWRACES: 12 WRRACES: 23 RWRACES: 10
+4054556/73719114423152/73719114791748/73719115160344/7371911RACE:ToStream.java:1525, XNumber.java:49
+false true
+ALL:46/1992
+WRDRaces:0
+WWRACES: 12 WRRACES: 23 RWRACES: 11
+5528940/73719115897536/73719116266132/73719116634728/73719117003324/7371911Phase1 Time: 7.4606913s
+Post processing starts...
+3/466/469/4612/4615/4618/4621/4624/4627/4630/4633/4636/4639/4642/4645/46Variables:9707
+DynamicRaces:46
+UniqueRaces:46
+VALID RACES: 34
+INVALID RACES: 12
+DEF WRD ENOUGH: 3
+FALSE POSITIVES: 0
+WWRace: 11
+WRRace: 13
+RWRace: 10
+Max writes:12
+Avg writes:1.0364626990779546
+NotOne:26
+Categorising:
+ =0:83
+=1:4443
+>=2:302
+>=5:77
+>=10:26
+PostProcessing Time: 45.0112ms
+Reads:0
+Writes:0
+Read-Read-Races:0/0
+Read-Write-Races:0/0
+Write-Read-Races:0/0
+Write-Write-Race:46/1992
+Write-Read-Deps:0
+Write-Read-Dep-Races:0/0
+ALL:46/1992
+Missing Edge Cases: 0
+Free Counter: 0
+Phase1:46/0
+Phase2:0/0
