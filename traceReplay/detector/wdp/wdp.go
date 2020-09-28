@@ -30,7 +30,7 @@ func (l *EventCollector) Put(p *util.SyncPair) {
 func Init() {
 	threads = make(map[uint32]*thread)
 	locks = make(map[uint32]*lock)
-	signalList = make(map[uint32]signal)
+	signalList = make(map[uint32]vcepoch)
 	variables = make(map[uint32]*variable)
 	volatiles = make(map[uint32]vcepoch)
 	notifies = make(map[uint32]vcepoch)
@@ -50,7 +50,7 @@ func Init() {
 
 var threads map[uint32]*thread
 var locks map[uint32]*lock
-var signalList map[uint32]signal
+var signalList map[uint32]vcepoch
 var variables map[uint32]*variable
 var volatiles map[uint32]vcepoch
 var notifies map[uint32]vcepoch

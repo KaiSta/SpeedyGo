@@ -11,7 +11,7 @@
             "host": "127.0.0.1",
             "program": "${workspaceRoot}\\main.go",
             "env": {},
-            "args": ["-trace", "..\\benchmark\\Test25.log", "-mode", "tsanEHBC", "-parser", "javainc"],
+            "args": ["-trace", "playground.log", "-mode", "wdp", "-parser", "javainc"],
             "showLog": false
         }
     ]
