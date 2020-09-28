@@ -21,6 +21,7 @@ import (
 	"./w3po"
 	"./wcp"
 	"./wcpp"
+	"./wdp"
 )
 
 func init() {
@@ -36,7 +37,7 @@ func init() {
 	fsshbee.Init()
 	wcpp.Init()
 	w3po.Init()
-
+	wdp.Init()
 }
 
 var debugReplay = false
