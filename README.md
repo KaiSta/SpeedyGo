@@ -19,7 +19,7 @@ go run main.go -ls
 ## List of Algorithms
 
 * [SHBEE](https://arxiv.org/abs/1909.03289)
-* [W3PO](https://github.com/KaiSta/SpeedyGo)
+* [W3PO](https://freidok.uni-freiburg.de/data/222723)
 * [SSHB](https://arxiv.org/abs/1905.10855)
 * SHB
 * FastTrack
