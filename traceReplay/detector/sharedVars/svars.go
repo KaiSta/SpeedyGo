@@ -3,9 +3,9 @@ package svars
 import (
 	"fmt"
 
-	"../../util"
-	"../analysis"
-	"../traceReplay"
+	"github.com/kai/SpeedyGo/traceReplay/util"
+	"github.com/kai/SpeedyGo/traceReplay/detector/analysis"
+	"github.com/kai/SpeedyGo/traceReplay/detector/traceReplay"
 )
 
 type ListenerDataAccess struct{}

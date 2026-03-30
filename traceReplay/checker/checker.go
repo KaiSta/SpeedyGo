@@ -1,7 +1,7 @@
 package checker
 
 import (
-	"../util"
+	"github.com/kai/SpeedyGo/traceReplay/util"
 )
 
 type EventPair struct {

@@ -1,7 +1,7 @@
 package speedygo
 
 import (
-	"../report"
+	"github.com/kai/SpeedyGo/traceReplay/detector/report"
 	"github.com/xojoc/bitset"
 )
 

@@ -3,8 +3,8 @@ package reverseReplay
 import (
 	"fmt"
 
-	"../../util"
-	"../traceReplay"
+	"github.com/kai/SpeedyGo/traceReplay/util"
+	"github.com/kai/SpeedyGo/traceReplay/detector/traceReplay"
 )
 
 type DataRace struct {

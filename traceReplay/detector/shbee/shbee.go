@@ -6,14 +6,27 @@ import (
 
 	"github.com/xojoc/bitset"
 
-	"../../util"
-	algos "../analysis"
-	"../report"
-	"../traceReplay"
+	algos "github.com/kai/SpeedyGo/traceReplay/detector/analysis"
+	"github.com/kai/SpeedyGo/traceReplay/detector/report"
+	"github.com/kai/SpeedyGo/traceReplay/detector/traceReplay"
+	"github.com/kai/SpeedyGo/traceReplay/util"
 )
 
 var debug = true
 var statistics = true
+
+// Global counters for performance tracking
+var (
+	countNew = 0
+	countOld = 0
+	countFP  = 0
+)
+
+// Pre-allocated slices to reduce allocations
+var (
+	newFrontierPool = make([]*dot, 0, 1000)
+	connectToPool   = make([]*dot, 0, 1000)
+)
 
 type ListenerAsyncSnd struct{}
 type ListenerAsyncRcv struct{}
@@ -51,13 +64,12 @@ func (l *EventCollector) Put(p *util.SyncPair) {
 			variables = make(map[uint32]variable)
 		}
 	}
-	for _, l := range l.listeners {
-		l.Put(p)
+	for _, listener := range l.listeners {
+		listener.Put(p)
 	}
 }
 
 func Init() {
-
 	locks = make(map[uint32]vcepoch)
 	threads = make(map[uint32]thread)
 	signalList = make(map[uint32]vcepoch)
@@ -129,12 +141,6 @@ type pair struct {
 	a bool
 }
 
-type read struct {
-	File uint32
-	Line uint32
-	T    uint32
-}
-
 type variable struct {
 	races     []datarace
 	history   []variableHistory
@@ -143,13 +149,6 @@ type variable struct {
 	lastWrite vcepoch
 	lwDot     *dot
 	current   int
-
-	//frontier  map[uint32]*pair
-	//graph          map[int][]*dot
-	//isWrite        *bitset.BitSet
-	//raceFilter     map[int]*bitset.BitSet
-	//readReadFilter map[read]map[read]struct{}
-	//cache map[int][]*dot
 }
 
 type dataRace struct {
@@ -171,73 +170,22 @@ type myGraph struct {
 }
 
 func (g *myGraph) add(dID int, dots []*dot) {
-	if (dID - 1) >= len(g.ds) {
-		g.ds = append(g.ds, dots)
-	} else {
-		g.ds[dID-1] = dots
+	if dID < 1 {
+		return
 	}
+	// Grow slice if needed
+	for len(g.ds) < dID {
+		g.ds = append(g.ds, nil)
+	}
+	g.ds[dID-1] = dots
 }
 
 func (g *myGraph) get(dID int) []*dot {
+	if dID < 1 || dID > len(g.ds) {
+		return nil
+	}
 	return g.ds[dID-1]
 }
-
-// func (v *variable) isNewReadRead(T1, T2 uint32, dot1, dot2 *dot) bool {
-// 	r1 := read{T: T1, File: dot1.ev.Ops[0].SourceRef, Line: dot1.ev.Ops[0].Line}
-// 	r2 := read{T: T2, File: dot2.ev.Ops[0].SourceRef, Line: dot2.ev.Ops[0].Line}
-// 	set1 := v.readReadFilter[r1]
-// 	if set1 == nil {
-// 		set1 = make(map[read]struct{})
-// 	}
-// 	set2 := v.readReadFilter[r2]
-// 	if set2 == nil {
-// 		set2 = make(map[read]struct{})
-// 	}
-
-// 	_, ok1 := set1[r2]
-// 	_, ok2 := set2[r1]
-
-// 	if ok1 || ok2 {
-// 		return false
-// 	}
-
-// 	set1[r2] = struct{}{}
-// 	set2[r1] = struct{}{}
-// 	v.readReadFilter[r1] = set1
-// 	v.readReadFilter[r2] = set2
-// 	return true
-// }
-
-// func (v *variable) addRace(raceAcc, prevAcc *dot) {
-// 	return
-// 	set1 := v.raceFilter[raceAcc.int]
-// 	if set1 == nil {
-// 		set1 = &bitset.BitSet{}
-// 	}
-// 	set1.Set(prevAcc.int)
-// 	v.raceFilter[raceAcc.int] = set1
-
-// 	set2 := v.raceFilter[prevAcc.int]
-// 	if set2 == nil {
-// 		set2 = &bitset.BitSet{}
-// 	}
-// 	set2.Set(raceAcc.int)
-// 	v.raceFilter[prevAcc.int] = set2
-// }
-
-// func (v *variable) isNewRace(raceAcc, prevAcc *dot) bool {
-// 	return true
-// 	set1 := v.raceFilter[raceAcc.int]
-// 	if set1 == nil {
-// 		set1 = &bitset.BitSet{}
-// 	}
-// 	set2 := v.raceFilter[prevAcc.int]
-// 	if set2 == nil {
-// 		set2 = &bitset.BitSet{}
-// 	}
-
-// 	return !set1.Get(prevAcc.int) || !set2.Get(raceAcc.int)
-// }
 
 type dot struct {
 	int
@@ -256,7 +204,15 @@ type datarace struct {
 }
 
 func newVar() variable {
-	return variable{lastWrite: newvc2(), lwDot: nil, frontier: make([]*dot, 0), current: 0, graph: myGraph{make([][]*dot, 0, 1000)}, races: make([]datarace, 0, 1000), history: make([]variableHistory, 0)}
+	return variable{
+		lastWrite: newvc2(),
+		lwDot:     nil,
+		frontier:  make([]*dot, 0, 100), // Pre-allocate reasonable capacity
+		current:   0,
+		graph:     myGraph{ds: make([][]*dot, 0, 1000)}, // Pre-allocate with capacity
+		races:     make([]datarace, 0, 100),             // Pre-allocate reasonable capacity
+		history:   make([]variableHistory, 0, 200),      // Pre-allocate reasonable capacity
+	}
 }
 
 func (l *ListenerAsyncRcv) Put(p *util.SyncPair) {
@@ -343,25 +299,6 @@ var startDot = dot{int: 0}
 var readCount uint32
 var writeCount uint32
 
-// func (v *variable) CreateDot(p *util.Item, vc vcepoch) (*dot, bool) {
-// 	doubleFilter, ok := doubleFilterPerT[p.Thread]
-// 	if !ok {
-// 		doubleFilter = make(map[loc]*dot)
-// 	}
-
-// 	currLoc := loc{p.Ops[0].SourceRef, p.Ops[0].Line}
-// 	newFE, ok := doubleFilter[currLoc]
-
-// 	if !ok {
-// 		v.current++
-// 		newFE = &dot{v: vc.clone(), int: v.current, ev: p, write: p.Ops[0].Kind&util.WRITE > 0}
-// 		doubleFilter[currLoc] = newFE
-// 		doubleFilterPerT[p.Thread] = doubleFilter
-// 		return newFE, true
-// 	}
-// 	return &dot{v: vc.clone(), int: -1, ev: p, write: p.Ops[0].Kind&util.WRITE > 0}, false
-// }
-
 var countnew = 0
 var countold = 0
 
@@ -373,8 +310,6 @@ func intersect(a, b map[uint32]struct{}) bool {
 	}
 	return false
 }
-
-var countFP = 0
 
 func (l *ListenerDataAccessReadReadDirectOp) Put(p *util.SyncPair) {
 	if !p.DataAccess {
@@ -394,8 +329,6 @@ func (l *ListenerDataAccessReadReadDirectOp) Put(p *util.SyncPair) {
 	//var newFE *dot
 
 	if p.Write {
-		//newFE, isNew := varstate.CreateDot(p.Ev, t1)
-
 		varstate.current++
 		//newFE := &dot{v: t1.clone(), int: varstate.current, ev: p.Ev, write: true}
 		newFE := &dot{v: t1.vc.clone(), int: varstate.current, t: uint16(p.T1), sourceRef: p.Ev.Ops[0].SourceRef, line: uint16(p.Ev.Ops[0].Line), write: true, ls: make(map[uint32]struct{})}
@@ -404,8 +337,11 @@ func (l *ListenerDataAccessReadReadDirectOp) Put(p *util.SyncPair) {
 		}
 
 		countnew++
-		newFrontier := make([]*dot, 0, len(varstate.frontier))
-		connectTo := make([]*dot, 0)
+
+		// Pre-allocate slices with estimated capacity for better performance
+		frontierLen := len(varstate.frontier)
+		newFrontier := make([]*dot, 0, frontierLen+1)
+		connectTo := make([]*dot, 0, frontierLen/4) // Estimate 25% need connections
 
 		for _, f := range varstate.frontier {
 			//k := f.v.get(f.ev.Thread)       //j#k
@@ -457,8 +393,6 @@ func (l *ListenerDataAccessReadReadDirectOp) Put(p *util.SyncPair) {
 		}
 
 	} else if p.Read {
-		//newFE, isNew := varstate.CreateDot(p.Ev, t1)
-
 		varstate.current++
 		//newFE := &dot{int: varstate.current, ev: p.Ev, write: false}
 		newFE := &dot{v: t1.vc.clone(), int: varstate.current, t: uint16(p.T1), sourceRef: uint32(p.Ev.Ops[0].SourceRef), line: uint16(p.Ev.Ops[0].Line), write: false, ls: make(map[uint32]struct{})}
@@ -493,8 +427,10 @@ func (l *ListenerDataAccessReadReadDirectOp) Put(p *util.SyncPair) {
 		t1.vc = t1.vc.ssync(varstate.lastWrite) //Th(i) = max(Th(i),L W (x))
 		newFE.v = t1.vc.clone()
 
-		newFrontier := make([]*dot, 0, len(varstate.frontier))
-		connectTo := make([]*dot, 0)
+		// Pre-allocate slices with estimated capacity for better performance
+		frontierLen := len(varstate.frontier)
+		newFrontier := make([]*dot, 0, frontierLen+1)
+		connectTo := make([]*dot, 0, frontierLen/4) // Estimate 25% need connections
 		for _, f := range varstate.frontier {
 
 			// k := f.v.get(f.ev.Thread)       //j#k
@@ -932,7 +868,6 @@ func (l *ListenerPostProcess) Put(p *util.SyncPair) {
 
 	fmt.Println("NewDots:", countnew)
 	fmt.Println("OldDots:", countold)
-
 	fmt.Println("FALSE POSITIVES:", countFP)
 
 	fmt.Println("GRAPH DATA")
@@ -958,9 +893,9 @@ func (l *ListenerPostProcess) Put(p *util.SyncPair) {
 // 		}
 // 	}
 
-// 	x = append(x, of)
-// 	v.graph[nf.int] = x
-// }
+//		x = append(x, of)
+//		v.graph[nf.int] = x
+//	}
 func (v *variable) updateGraph3(nf *dot, of []*dot) {
 	//v.graph[nf.int] = of
 	v.graph.add(nf.int, of)
@@ -1000,30 +935,18 @@ func (v *variable) detectGraphRaces() {
 		return
 	}
 
-	// steps := 0
-	// stepBarrier := (len(v.races) / 10) + 1
-	visMap := make(map[int]*bitset.BitSet)
-	//cache := make(map[int][]*dot)
-	for _, dr := range v.races {
-		// steps++
-		// if steps%stepBarrier == 0 {
-		// 	fmt.Printf("\r%v/%v", i+1, len(v.races))
-		// }
+	visMap := make(map[int]*bitset.BitSet, len(v.races))
 
+	for _, dr := range v.races {
 		d := dr.d1
 
 		visited, ok := visMap[d.int]
 		if !ok {
 			visited = &bitset.BitSet{}
+			visMap[d.int] = visited
 		}
-		// if !v.isWrite.Get(dr.d1.int) && !v.isWrite.Get(dr.d2.int) {
-		// 	v.findRacesReadOp(dr.d1, dr.d2, cache)
-		// 	//v.findRaces(dr.d1, dr.d2, visited)
-		// } else {
-		v.findRaces(dr.d1, dr.d2, visited, 0)
-		//}
 
-		visMap[d.int] = visited
+		v.findRaces(dr.d1, dr.d2, visited, 0)
 	}
 }
 
@@ -1099,55 +1022,49 @@ var minDistance = int((^uint(0)) >> 1)
 var distCount int
 var distSum int
 
-//second is the dot that triggered the race
+// second is the dot that triggered the race
 func (v *variable) findRaces(raceAcc, prevAcc *dot, visited *bitset.BitSet, level uint64) {
 	if visited.Get(prevAcc.int) {
 		return
 	}
 	visited.Set(prevAcc.int)
 
-	//for _, d := range v.graph[prevAcc.int] {
 	for _, d := range v.graph.get(prevAcc.int) {
 		if d.int == 0 {
 			continue
 		}
 
-		// dVal := d.v.get((d.ev.Thread))
-		// raVal := raceAcc.v.get((d.ev.Thread))
-		dVal := d.v.get(uint32(d.t))
-		raVal := raceAcc.v.get(uint32(d.t))
+		dThread := uint32(d.t)
+		dVal := d.v.get(dThread)
+		raVal := raceAcc.v.get(dThread)
 
-		if dVal > raVal { // && !intersect(d.ls, raceAcc.ls) /*&& v.isNewRace(raceAcc, d)*/ {
+		if dVal > raVal {
+			b := report.ReportRace(
+				report.Location{File: uint32(d.sourceRef), Line: uint32(d.line), W: d.write},
+				report.Location{File: uint32(raceAcc.sourceRef), Line: uint32(raceAcc.line), W: raceAcc.write},
+				false, 1)
 
-			// report.ReportRace(report.Location{File: d.ev.Ops[0].SourceRef, Line: d.ev.Ops[0].Line, W: d.write},
-			// 	report.Location{File: raceAcc.ev.Ops[0].SourceRef, Line: raceAcc.ev.Ops[0].Line, W: raceAcc.write}, false, 1)
-			b := report.ReportRace(report.Location{File: uint32(d.sourceRef), Line: uint32(d.line), W: d.write},
-				report.Location{File: uint32(raceAcc.sourceRef), Line: uint32(raceAcc.line), W: raceAcc.write}, false, 1)
 			if b {
-				b = intersect(d.ls, raceAcc.ls)
-				if b {
+				isFalsePositive := intersect(d.ls, raceAcc.ls)
+				if isFalsePositive {
 					countFP++
 				} else {
 					distCount++
-					distSum += raceAcc.int - d.int
-					if (raceAcc.int - d.int) > maxDistance {
-						maxDistance = raceAcc.int - d.int
+					distance := raceAcc.int - d.int
+					distSum += distance
+					if distance > maxDistance {
+						maxDistance = distance
 					}
-
-					if (raceAcc.int - d.int) < minDistance {
-						minDistance = raceAcc.int - d.int
+					if distance < minDistance {
+						minDistance = distance
 					}
 				}
-				fmt.Println(">>>", b, countFP)
-
+				fmt.Println(">>>", isFalsePositive, countFP)
 			}
-
-			//	v.addRace(raceAcc, d)
 
 			v.findRaces(raceAcc, d, visited, level+1)
 		}
 	}
-
 }
 
 func (v *variable) find(current, toFind *dot) bool {

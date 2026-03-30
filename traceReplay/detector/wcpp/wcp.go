@@ -3,10 +3,10 @@ package wcpp
 import (
 	"fmt"
 
-	"../../util"
-	algos "../analysis"
-	"../report"
-	"../traceReplay"
+	"github.com/kai/SpeedyGo/traceReplay/util"
+	algos "github.com/kai/SpeedyGo/traceReplay/detector/analysis"
+	"github.com/kai/SpeedyGo/traceReplay/detector/report"
+	"github.com/kai/SpeedyGo/traceReplay/detector/traceReplay"
 )
 
 type ListenerAsyncSnd struct{}

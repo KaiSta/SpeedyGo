@@ -1,11 +1,11 @@
 package raceTrack
 
 import (
-	"../../util"
-	"../analysis"
-	"../eraser"
-	"../report"
-	"../traceReplay"
+	"github.com/kai/SpeedyGo/traceReplay/util"
+	"github.com/kai/SpeedyGo/traceReplay/detector/analysis"
+	"github.com/kai/SpeedyGo/traceReplay/detector/eraser"
+	"github.com/kai/SpeedyGo/traceReplay/detector/report"
+	"github.com/kai/SpeedyGo/traceReplay/detector/traceReplay"
 )
 
 type ListenerAsyncSnd struct{}

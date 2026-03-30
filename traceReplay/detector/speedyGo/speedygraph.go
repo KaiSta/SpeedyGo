@@ -3,7 +3,7 @@ package speedygo
 import (
 	"fmt"
 
-	"../report"
+	"github.com/kai/SpeedyGo/traceReplay/detector/report"
 )
 
 type graph struct {

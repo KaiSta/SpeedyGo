@@ -8,10 +8,9 @@ import (
 	"runtime"
 	"time"
 
-	race "./detector"
-
-	traceParser "./parser"
-	"./util"
+	race "github.com/kai/SpeedyGo/traceReplay/detector"
+	traceParser "github.com/kai/SpeedyGo/traceReplay/parser"
+	"github.com/kai/SpeedyGo/traceReplay/util"
 
 	"runtime/pprof"
 )
@@ -39,101 +38,86 @@ func main() {
 		return
 	}
 
-	runtime.GOMAXPROCS(4) //might help with the garbage collector, cpus with very high core counts slow it down
+	// Optimize GOMAXPROCS for better garbage collection performance
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	var f *os.File
-
-	if !*json && !*plain && !*bench {
-		panic("no output format defined")
+	// Validate flags
+	if err := validateFlags(trace, json, plain, bench, analysis); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
 	}
 
-	if trace == nil || *trace == "" {
-		panic("no valid trace file")
-	}
-	if *analysis == "" {
-		panic("no analysis mode chosen")
+	// Start CPU profiling if requested
+	var profileFile *os.File
+	if *cpuprofile != "" {
+		var err error
+		profileFile, err = os.Create(*cpuprofile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating profile file: %v\n", err)
+			os.Exit(1)
+		}
+		pprof.StartCPUProfile(profileFile)
+		defer func() {
+			pprof.StopCPUProfile()
+			profileFile.Close()
+		}()
 	}
 
 	fmt.Println("Parsing trace...")
-	a, b := filepath.Abs(*trace)
-	fmt.Println("Trace path:", a, b)
-	var items []util.Item
-	//var itemChan chan *util.Item
-	if *parser == "go" {
-		items = traceParser.ParseTracev2(*trace)
-	} else if *parser == "java" || *parser == "java2" {
-		items = traceParser.ParseJTracev2(*trace, *n)
-	} else {
-		//	itemChan = make(chan *util.Item, 100000)
-		//	go traceParser.ParseJTracevInc(*trace, *n, itemChan)
+	tracePath, err := filepath.Abs(*trace)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting absolute path: %v\n", err)
+		os.Exit(1)
 	}
-	fmt.Println("Parsing trace complete!")
+	fmt.Println("Trace path:", tracePath)
 
-	// for k, v := range traceParser.FileNumToString {
-	// 	if v == "NodeSequence.java" {
-	// 		fmt.Println(k, "\t", v)
-	// 	} else if v == "Lexer.java" {
-	// 		fmt.Println(k, "\t", v)
-	// 	}
-	// }
-	// return
-	//parser.FileNumToString[loc1.File]
+	var items []util.Item
+	switch *parser {
+	case "go":
+		items = traceParser.ParseTracev2(*trace)
+	case "java", "java2":
+		items = traceParser.ParseJTracev2(*trace, *n)
+	default:
+		// Handle incremental parsing cases
+	}
+
+	fmt.Println("Parsing trace complete!")
 
 	if *validateTrace {
 		fmt.Println("Validating trace...")
-		//util.ValidateTrace(items)
 		race.RunAPIV2(items, *analysis, *filter)
 		fmt.Println("Validating successful")
 	}
 
-	if *cpuprofile != "" {
-		f, _ = os.Create(*cpuprofile)
-		pprof.StartCPUProfile(f)
-	}
-
-	//debug.SetGCPercent(-1)
+	// Run the analysis
 	t1 := time.Now()
-	if *parser == "javainc2" {
-		race.RunAPISingleIncDouble(*analysis, *postProcess, *trace, *n, *s, *repeat)
-	} else if *parser == "java2" {
-		race.RunAPISingleDouble(items, *analysis, *filter, *postProcess)
-	} else if *parser != "javainc" {
-		race.RunAPISingle(items, *analysis, *filter, *postProcess)
-	} else {
-		race.RunAPISingleInc(*analysis, *postProcess, *trace, *n, *s, *filter)
-	}
+	runAnalysis(*parser, *analysis, *postProcess, *trace, items, *n, *s, *repeat, *filter)
 	t2 := time.Now()
 	fmt.Println("Complete Time:", t2.Sub(t1))
+}
 
-	if *cpuprofile != "" {
-		pprof.StopCPUProfile()
+func validateFlags(trace *string, json, plain, bench *bool, analysis *string) error {
+	if !*json && !*plain && !*bench {
+		return fmt.Errorf("no output format defined")
 	}
+	if trace == nil || *trace == "" {
+		return fmt.Errorf("no valid trace file")
+	}
+	if *analysis == "" {
+		return fmt.Errorf("no analysis mode chosen")
+	}
+	return nil
+}
 
-	return
-	// if *plain {
-	// 	color.HiGreen("Covered schedules")
-	// 	color.HiRed("Uncovered schedules")
-	// 	color.HiYellow("-----------------------")
-	// }
-
-	//	race.Run(*trace, *json, *plain, *bench)
-	// if *parser == "go" {
-	// 	if *analysis == "fasttrack" {
-	// 		race.RunFastTrack(*trace, *json, *plain, *bench)
-	// 	} else if *analysis == "racetrack" {
-	// 		race.RunRaceTrack(*trace, *json, *plain, *bench)
-	// 	} else if *analysis == "eraser" {
-	// 		race.RunEraser(*trace, *json, *plain, *bench)
-	// 	} else if *analysis == "twintrack" {
-	// 		race.RunTwinTrack(*trace, *json, *plain, *bench)
-	// 	} else if *analysis == "tsan" {
-	// 		race.RunThreadSanitizer(*trace, *json, *plain, *bench)
-	// 	} else if *analysis == "noname" {
-	// 		race.RunNoName(*trace, *json, *plain, *bench)
-	// 	} else if *analysis == "gotrack" {
-	// 		race.RunGoTrack(*trace, *json, *plain, *bench)
-	// 	}
-	// } else {
-
-	// }
+func runAnalysis(parser, analysis string, postProcess bool, trace string, items []util.Item, n, s uint64, repeat int, filter uint64) {
+	switch parser {
+	case "javainc2":
+		race.RunAPISingleIncDouble(analysis, postProcess, trace, n, s, repeat)
+	case "java2":
+		race.RunAPISingleDouble(items, analysis, filter, postProcess)
+	case "javainc":
+		race.RunAPISingleInc(analysis, postProcess, trace, n, s, filter)
+	default:
+		race.RunAPISingle(items, analysis, filter, postProcess)
+	}
 }

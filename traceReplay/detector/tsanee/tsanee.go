@@ -3,10 +3,10 @@ package tsanee
 import (
 	"github.com/xojoc/bitset"
 
-	"../../util"
-	"../analysis"
-	"../report"
-	"../traceReplay"
+	algos "github.com/kai/SpeedyGo/traceReplay/detector/analysis"
+	"github.com/kai/SpeedyGo/traceReplay/detector/report"
+	"github.com/kai/SpeedyGo/traceReplay/detector/traceReplay"
+	"github.com/kai/SpeedyGo/traceReplay/util"
 )
 
 type ListenerAsyncSnd struct{}
@@ -77,6 +77,12 @@ func newT(id uint32) thread {
 
 func newL() lock {
 	return lock{rel: newvc2(), hb: newvc2()}
+}
+
+// advanceThreadClock advances both VC and HB clocks for a thread by 1
+func advanceThreadClock(t *thread, threadID uint32) {
+	t.vc = t.vc.add(threadID, 1)
+	t.hb = t.hb.add(threadID, 1)
 }
 
 type pair struct {
@@ -236,8 +242,7 @@ func (l *ListenerAsyncRcv) Put(p *util.SyncPair) {
 	lock.hb = lock.hb.ssync(t1.hb)
 	delete(t1.ls, p.T2)
 
-	t1.vc = t1.vc.add(p.T1, 1) //inc(Th(i),i)
-	t1.hb = t1.hb.add(p.T1, 1)
+	advanceThreadClock(&t1, p.T1)
 
 	if t1.strongSync == p.T2 {
 		t1.strongSync = 0
@@ -272,8 +277,7 @@ func (l *ListenerAsyncSnd) Put(p *util.SyncPair) {
 	t1.hb = t1.hb.ssync(lock.hb)  // Th(i)_hb = Th(i)_hb U Rel(x)_hb (hb synchro)
 	t1.ls[p.T2] = struct{}{}
 
-	t1.vc = t1.vc.add(p.T1, 1)
-	t1.hb = t1.hb.add(p.T1, 1)
+	advanceThreadClock(&t1, p.T1)
 
 	threads[p.T1] = t1
 	locks[p.T2] = lock
@@ -281,8 +285,12 @@ func (l *ListenerAsyncSnd) Put(p *util.SyncPair) {
 
 var startDot = dot{int: 0}
 
-//intersect returns true if the two sets have at least one element in common
+// intersect returns true if the two sets have at least one element in common
 func intersect(a, b map[uint32]struct{}) bool {
+	// Check the smaller map first for better performance
+	if len(a) > len(b) {
+		a, b = b, a
+	}
 	for k := range a {
 		if _, ok := b[k]; ok {
 			return true
@@ -315,8 +323,9 @@ func (l *ListenerDataAccess) Put(p *util.SyncPair) {
 			newFE.ls[k] = struct{}{}
 		}
 
-		newFrontier := make([]*dot, 0, len(varstate.frontier))
-		connectTo := make([]*dot, 0)
+		frontierLen := len(varstate.frontier)
+		newFrontier := make([]*dot, 0, frontierLen+1) // +1 for newFE
+		connectTo := make([]*dot, 0, frontierLen/2)   // estimate capacity
 
 		for _, f := range varstate.frontier {
 			k := f.v.get(uint32(f.t))
@@ -403,8 +412,10 @@ func (l *ListenerDataAccess) Put(p *util.SyncPair) {
 		t1.vc = t1.vc.ssync(varstate.lastWrite) //Th(i) = max(Th(i),L W (x))
 		newFE.v = t1.vc.clone()
 
-		newFrontier := make([]*dot, 0, len(varstate.frontier))
-		connectTo := make([]*dot, 0)
+		frontierLen := len(varstate.frontier)
+		newFrontier := make([]*dot, 0, frontierLen+1) // +1 for newFE
+		connectTo := make([]*dot, 0, frontierLen/2)   // estimate capacity
+
 		for _, f := range varstate.frontier {
 			k := f.v.get(uint32(f.t))          //j#k
 			thi_at_j := t1.vc.get(uint32(f.t)) //Th(i)[j]
@@ -455,8 +466,7 @@ func (l *ListenerDataAccess) Put(p *util.SyncPair) {
 		vol = t1.vc.clone()
 		volatiles[p.T2] = vol
 	}
-	t1.vc = t1.vc.add(p.T1, 1) //inc(Th(i),i)
-	t1.hb = t1.hb.add(p.T1, 1)
+	advanceThreadClock(&t1, p.T1)
 	//update states
 	threads[p.T1] = t1
 	variables[p.T2] = varstate
@@ -479,8 +489,7 @@ func (l *ListenerGoFork) Put(p *util.SyncPair) {
 		signalList[p.T2] = t1.vc.clone().ssync(t1.hb)
 	}
 
-	t1.vc = t1.vc.add(p.T1, 1)
-	t1.hb = t1.hb.add(p.T1, 1)
+	advanceThreadClock(&t1, p.T1)
 	threads[p.T1] = t1
 }
 
@@ -497,8 +506,7 @@ func (l *ListenerGoWait) Put(p *util.SyncPair) {
 			t1 = newT(p.T1)
 		}
 		t1.vc = t1.vc.ssync(t2)
-		t1.vc = t1.vc.add(p.T1, 1)
-		t1.hb = t1.hb.add(p.T1, 1)
+		advanceThreadClock(&t1, p.T1)
 		threads[p.T1] = t1
 	}
 
@@ -523,8 +531,7 @@ func (l *ListenerNT) Put(p *util.SyncPair) {
 	} else {
 		vc = vc.ssync(t1.vc.clone().ssync(t1.hb))
 	}
-	t1.vc = t1.vc.add(p.T1, 1)
-	t1.hb = t1.hb.add(p.T1, 1)
+	advanceThreadClock(&t1, p.T1)
 	notifies[p.T2] = vc
 	threads[p.T1] = t1
 }
@@ -542,8 +549,7 @@ func (l *ListenerNTWT) Put(p *util.SyncPair) {
 		}
 
 		t1.vc = t1.vc.ssync(vc)
-		t1.vc = t1.vc.add(p.T1, 1)
-		t1.hb = t1.hb.add(p.T1, 1)
+		advanceThreadClock(&t1, p.T1)
 
 		if t1.strongSync == 0 {
 			vc = t1.vc.clone()
@@ -564,34 +570,43 @@ func (l *ListenerPostProcess) Put(p *util.SyncPair) {
 }
 
 func (v *variable) findRaces(raceAcc, prevAcc *dot, visited *bitset.BitSet, level uint64) {
-	if visited.Get(prevAcc.int) {
-		return
+	// Use iterative approach instead of recursion to avoid stack overflow
+	type stackItem struct {
+		node  *dot
+		level uint64
 	}
-	visited.Set(prevAcc.int)
+	stack := []stackItem{{prevAcc, level}}
 
-	list, ok := v.graph.get(prevAcc.int)
-	if !ok {
-		return
-	}
-	for _, d := range list {
-		if d.int == 0 {
+	for len(stack) > 0 {
+		current := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+
+		if visited.Get(current.node.int) {
+			continue
+		}
+		visited.Set(current.node.int)
+
+		list, ok := v.graph.get(current.node.int)
+		if !ok {
 			continue
 		}
 
-		dVal := d.v.get(uint32(d.t))
-		raVal := raceAcc.v.get(uint32(d.t))
-
-		if dVal > raVal {
-			if !intersect(raceAcc.ls, d.ls) {
-				report.ReportRace(report.Location{File: uint32(d.sourceRef), Line: uint32(d.line), W: d.write},
-					report.Location{File: uint32(raceAcc.sourceRef), Line: uint32(raceAcc.line), W: raceAcc.write}, false, 1)
-
-				// if b {
-				// 	fmt.Println("LS's", raceAcc.ls, d.ls, intersect(raceAcc.ls, d.ls))
-				// }
+		for _, d := range list {
+			if d.int == 0 {
+				continue
 			}
-			v.findRaces(raceAcc, d, visited, level+1)
+
+			dVal := d.v.get(uint32(d.t))
+			raVal := raceAcc.v.get(uint32(d.t))
+
+			if dVal > raVal {
+				if !intersect(raceAcc.ls, d.ls) {
+					report.ReportRace(report.Location{File: uint32(d.sourceRef), Line: uint32(d.line), W: d.write},
+						report.Location{File: uint32(raceAcc.sourceRef), Line: uint32(raceAcc.line), W: raceAcc.write}, false, 1)
+				}
+				// Add to stack for iterative traversal
+				stack = append(stack, stackItem{d, current.level + 1})
+			}
 		}
 	}
-
 }

@@ -1,7 +1,7 @@
 package traceReplay
 
 import (
-	"../../util"
+	"github.com/kai/SpeedyGo/traceReplay/util"
 )
 
 type EventListener interface {

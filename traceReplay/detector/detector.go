@@ -1,6 +1,6 @@
 package race
 
-import "../util"
+import "github.com/kai/SpeedyGo/traceReplay/util"
 
 func createThreads(items []util.Item) map[uint32]util.Thread {
 	tmap := make(map[uint32]util.Thread)

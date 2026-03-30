@@ -4,24 +4,24 @@ import (
 	"fmt"
 	"time"
 
-	traceParser "../parser"
-	"../util"
-	algos "./analysis"
-	"./empty"
-	"./eraser"
-	fastTrack "./fasttrack"
-	"./fsshbee"
-	"./report"
-	"./shb"
-	"./shbee"
-	"./shbp"
-	sshb "./strictSHB"
-	"./threadSanitizer"
-	"./traceReplay"
-	"./w3po"
-	"./wcp"
-	"./wcpp"
-	"./wdp"
+	algos "github.com/kai/SpeedyGo/traceReplay/detector/analysis"
+	"github.com/kai/SpeedyGo/traceReplay/detector/empty"
+	"github.com/kai/SpeedyGo/traceReplay/detector/eraser"
+	fastTrack "github.com/kai/SpeedyGo/traceReplay/detector/fasttrack"
+	"github.com/kai/SpeedyGo/traceReplay/detector/fsshbee"
+	"github.com/kai/SpeedyGo/traceReplay/detector/report"
+	"github.com/kai/SpeedyGo/traceReplay/detector/shb"
+	"github.com/kai/SpeedyGo/traceReplay/detector/shbee"
+	"github.com/kai/SpeedyGo/traceReplay/detector/shbp"
+	sshb "github.com/kai/SpeedyGo/traceReplay/detector/strictSHB"
+	"github.com/kai/SpeedyGo/traceReplay/detector/threadSanitizer"
+	"github.com/kai/SpeedyGo/traceReplay/detector/traceReplay"
+	"github.com/kai/SpeedyGo/traceReplay/detector/w3po"
+	"github.com/kai/SpeedyGo/traceReplay/detector/wcp"
+	"github.com/kai/SpeedyGo/traceReplay/detector/wcpp"
+	"github.com/kai/SpeedyGo/traceReplay/detector/wdp"
+	"github.com/kai/SpeedyGo/traceReplay/parser"
+	"github.com/kai/SpeedyGo/traceReplay/util"
 )
 
 func init() {
@@ -41,6 +41,63 @@ func init() {
 }
 
 var debugReplay = false
+
+// convertItemToEvent converts a util.Item to a util.SyncPair event
+func convertItemToEvent(it *util.Item, signalList map[uint32]*util.Item) util.SyncPair {
+	op := it.Ops[0]
+
+	// Pre-compute common bit checks
+	isWrite := op.Kind&util.WRITE > 0
+	isRead := op.Kind&util.READ > 0
+	isAtomicWrite := op.Kind&util.ATOMICWRITE > 0
+	isAtomicRead := op.Kind&util.ATOMICREAD > 0
+	isSig := op.Kind&util.SIG > 0
+	isWait := op.Kind&util.WAIT > 0
+	isPreBranch := op.Kind&util.PREBRANCH > 0
+	isPostBranch := op.Kind&util.POSTBRANCH > 0
+	isNT := op.Kind&util.NT > 0
+	isNTWT := op.Kind&util.NTWT > 0
+	hasBufSize := op.BufSize > 0
+
+	var event util.SyncPair
+
+	// Data access events
+	if isWrite || isRead {
+		event = util.SyncPair{
+			T1: it.Thread, T2: op.Ch, DataAccess: true,
+			Write: isWrite, Read: isRead, Ev: it,
+		}
+	} else if isAtomicWrite || isAtomicRead {
+		event = util.SyncPair{
+			T1: it.Thread, T2: op.Ch, DataAccess: true,
+			AtomicWrite: isWrite, AtomicRead: isRead, Ev: it,
+		}
+	} else if isSig {
+		signalList[op.Ch] = it
+		event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsFork: true, Ev: it}
+	} else if isWait {
+		_, ok := signalList[op.Ch]
+		if ok {
+			event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsWait: true, Ev: it}
+		}
+	} else if isPreBranch {
+		event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsPreBranch: true, Ev: it}
+	} else if isPostBranch {
+		event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsPostBranch: true, Ev: it}
+	} else if isNT {
+		event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsNT: true, Ev: it}
+	} else if isNTWT {
+		event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsNTWT: true, Ev: it}
+	} else if hasBufSize {
+		if op.Mutex == util.LOCK {
+			event = util.SyncPair{T1: it.Thread, T2: op.Ch, Lock: true, AsyncSend: true, Ev: it}
+		} else if op.Mutex == util.UNLOCK {
+			event = util.SyncPair{T1: it.Thread, T2: op.Ch, Unlock: true, AsyncRcv: true, Ev: it}
+		}
+	}
+
+	return event
+}
 
 func startThreads(m *traceReplay.Machine) {
 	for {
@@ -219,7 +276,7 @@ func RunAPISingleInc(detector string, withPostProcess bool, trace string, n, a u
 	traceReplay.EvListener = []traceReplay.EventListener{algos.GetDetector(detector)}
 
 	items := make(chan *util.Item, 100000)
-	go traceParser.ParseJTracevInc(trace, n, a, items)
+	go parser.ParseJTracevInc(trace, n, a, items)
 
 	if filter == 1 {
 		filteredItems := make(chan *util.Item, 100000)
@@ -228,48 +285,16 @@ func RunAPISingleInc(detector string, withPostProcess bool, trace string, n, a u
 	}
 
 	steps := 0
-	//complete := len(items)
 	stepBarrier := 5000
-
 	SignalList2 := make(map[uint32]*util.Item)
 
-	var event util.SyncPair
 	t1 := time.Now()
 	for it := range items {
 		if debugReplay {
 			fmt.Println(it)
 		}
 
-		op := it.Ops[0]
-		if op.Kind&util.WRITE > 0 || op.Kind&util.READ > 0 {
-			event = util.SyncPair{T1: it.Thread, T2: op.Ch, DataAccess: true, Write: op.Kind&util.WRITE > 0,
-				Read: op.Kind&util.READ > 0, Ev: it}
-		} else if op.Kind&util.ATOMICWRITE > 0 || op.Kind&util.ATOMICREAD > 0 {
-			event = util.SyncPair{T1: it.Thread, T2: op.Ch, DataAccess: true, AtomicWrite: op.Kind&util.WRITE > 0,
-				AtomicRead: op.Kind&util.READ > 0, Ev: it}
-		} else if op.Kind&util.SIG > 0 {
-			SignalList2[op.Ch] = it
-			event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsFork: true, Ev: it}
-		} else if op.Kind&util.WAIT > 0 {
-			_, ok := SignalList2[op.Ch]
-			if ok {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsWait: true, Ev: it}
-			}
-		} else if op.Kind&util.PREBRANCH > 0 {
-			event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsPreBranch: true, Ev: it}
-		} else if op.Kind&util.POSTBRANCH > 0 {
-			event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsPostBranch: true, Ev: it}
-		} else if op.Kind&util.NT > 0 {
-			event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsNT: true, Ev: it}
-		} else if op.Kind&util.NTWT > 0 {
-			event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsNTWT: true, Ev: it}
-		} else if op.BufSize > 0 {
-			if op.Mutex == util.LOCK {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, Lock: true, AsyncSend: true, Ev: it}
-			} else if op.Mutex == util.UNLOCK {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, Unlock: true, AsyncRcv: true, Ev: it}
-			}
-		}
+		event := convertItemToEvent(it, SignalList2)
 
 		steps++
 		if steps%stepBarrier == 0 {
@@ -314,51 +339,19 @@ func RunAPISingleIncDouble(detector string, withPostProcess bool, trace string, 
 
 	for i := 0; i < repeat; i++ {
 		items := make(chan *util.Item, 100000)
-		go traceParser.ParseJTracevInc(trace, n, a, items)
+		go parser.ParseJTracevInc(trace, n, a, items)
 
 		steps := 0
-		//complete := len(items)
 		stepBarrier := 5000
-
 		SignalList2 := make(map[uint32]*util.Item)
 
-		var event util.SyncPair
 		t1 := time.Now()
 		for it := range items {
 			if debugReplay {
 				fmt.Println(it)
 			}
 
-			op := it.Ops[0]
-			if op.Kind&util.WRITE > 0 || op.Kind&util.READ > 0 {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, DataAccess: true, Write: op.Kind&util.WRITE > 0,
-					Read: op.Kind&util.READ > 0, Ev: it}
-			} else if op.Kind&util.ATOMICWRITE > 0 || op.Kind&util.ATOMICREAD > 0 {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, DataAccess: true, AtomicWrite: op.Kind&util.WRITE > 0,
-					AtomicRead: op.Kind&util.READ > 0, Ev: it}
-			} else if op.Kind&util.SIG > 0 {
-				SignalList2[op.Ch] = it
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsFork: true, Ev: it}
-			} else if op.Kind&util.WAIT > 0 {
-				_, ok := SignalList2[op.Ch]
-				if ok {
-					event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsWait: true, Ev: it}
-				}
-			} else if op.Kind&util.PREBRANCH > 0 {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsPreBranch: true, Ev: it}
-			} else if op.Kind&util.POSTBRANCH > 0 {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsPostBranch: true, Ev: it}
-			} else if op.Kind&util.NT > 0 {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsNT: true, Ev: it}
-			} else if op.Kind&util.NTWT > 0 {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsNTWT: true, Ev: it}
-			} else if op.BufSize > 0 {
-				if op.Mutex == util.LOCK {
-					event = util.SyncPair{T1: it.Thread, T2: op.Ch, Lock: true, AsyncSend: true, Ev: it}
-				} else if op.Mutex == util.UNLOCK {
-					event = util.SyncPair{T1: it.Thread, T2: op.Ch, Unlock: true, AsyncRcv: true, Ev: it}
-				}
-			}
+			event := convertItemToEvent(it, SignalList2)
 
 			steps++
 			if steps%stepBarrier == 0 {
@@ -405,46 +398,15 @@ func RunAPISingle(items []util.Item, detector string, filter uint64, withPostPro
 	stepBarrier := (complete / 20) + 1
 
 	traceReplay.EvListener = []traceReplay.EventListener{algos.GetDetector(detector)}
-
 	SignalList2 := make(map[uint32]*util.Item)
 
-	var event util.SyncPair
 	t1 := time.Now()
 	for i, it := range items {
 		if debugReplay {
 			fmt.Println(it)
 		}
 
-		op := it.Ops[0]
-		if op.Kind&util.WRITE > 0 || op.Kind&util.READ > 0 {
-			event = util.SyncPair{T1: it.Thread, T2: op.Ch, DataAccess: true, Write: op.Kind&util.WRITE > 0,
-				Read: op.Kind&util.READ > 0, Ev: &items[i]}
-		} else if op.Kind&util.ATOMICWRITE > 0 || op.Kind&util.ATOMICREAD > 0 {
-			event = util.SyncPair{T1: it.Thread, T2: op.Ch, DataAccess: true, AtomicWrite: op.Kind&util.WRITE > 0,
-				AtomicRead: op.Kind&util.READ > 0, Ev: &items[i]}
-		} else if op.Kind&util.SIG > 0 {
-			SignalList2[op.Ch] = &items[i]
-			event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsFork: true, Ev: &items[i]}
-		} else if op.Kind&util.WAIT > 0 {
-			_, ok := SignalList2[op.Ch]
-			if ok {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsWait: true, Ev: &items[i]}
-			}
-		} else if op.Kind&util.PREBRANCH > 0 {
-			event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsPreBranch: true, Ev: &items[i]}
-		} else if op.Kind&util.POSTBRANCH > 0 {
-			event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsPostBranch: true, Ev: &items[i]}
-		} else if op.Kind&util.NT > 0 {
-			event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsNT: true, Ev: &items[i]}
-		} else if op.Kind&util.NTWT > 0 {
-			event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsNTWT: true, Ev: &items[i]}
-		} else if op.BufSize > 0 {
-			if op.Mutex == util.LOCK {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, Lock: true, AsyncSend: true, Ev: &items[i]}
-			} else if op.Mutex == util.UNLOCK {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, Unlock: true, AsyncRcv: true, Ev: &items[i]}
-			}
-		}
+		event := convertItemToEvent(&items[i], SignalList2)
 
 		steps++
 		if steps%stepBarrier == 0 {
@@ -490,46 +452,15 @@ func RunAPISingleDouble(items []util.Item, detector string, filter uint64, withP
 		steps := 0
 		complete := len(items)
 		stepBarrier := (complete / 20) + 1
-
 		SignalList2 := make(map[uint32]*util.Item)
 
-		var event util.SyncPair
 		t1 := time.Now()
 		for i, it := range items {
 			if debugReplay {
 				fmt.Println(it)
 			}
 
-			op := it.Ops[0]
-			if op.Kind&util.WRITE > 0 || op.Kind&util.READ > 0 {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, DataAccess: true, Write: op.Kind&util.WRITE > 0,
-					Read: op.Kind&util.READ > 0, Ev: &items[i]}
-			} else if op.Kind&util.ATOMICWRITE > 0 || op.Kind&util.ATOMICREAD > 0 {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, DataAccess: true, AtomicWrite: op.Kind&util.WRITE > 0,
-					AtomicRead: op.Kind&util.READ > 0, Ev: &items[i]}
-			} else if op.Kind&util.SIG > 0 {
-				SignalList2[op.Ch] = &items[i]
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsFork: true, Ev: &items[i]}
-			} else if op.Kind&util.WAIT > 0 {
-				_, ok := SignalList2[op.Ch]
-				if ok {
-					event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsWait: true, Ev: &items[i]}
-				}
-			} else if op.Kind&util.PREBRANCH > 0 {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsPreBranch: true, Ev: &items[i]}
-			} else if op.Kind&util.POSTBRANCH > 0 {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsPostBranch: true, Ev: &items[i]}
-			} else if op.Kind&util.NT > 0 {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsNT: true, Ev: &items[i]}
-			} else if op.Kind&util.NTWT > 0 {
-				event = util.SyncPair{T1: it.Thread, T2: op.Ch, IsNTWT: true, Ev: &items[i]}
-			} else if op.BufSize > 0 {
-				if op.Mutex == util.LOCK {
-					event = util.SyncPair{T1: it.Thread, T2: op.Ch, Lock: true, AsyncSend: true, Ev: &items[i]}
-				} else if op.Mutex == util.UNLOCK {
-					event = util.SyncPair{T1: it.Thread, T2: op.Ch, Unlock: true, AsyncRcv: true, Ev: &items[i]}
-				}
-			}
+			event := convertItemToEvent(&items[i], SignalList2)
 
 			steps++
 			if steps%stepBarrier == 0 {

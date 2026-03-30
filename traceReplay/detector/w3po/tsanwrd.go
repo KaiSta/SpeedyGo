@@ -3,9 +3,9 @@ package w3po
 import (
 	"fmt"
 
-	"../../util"
-	algos "../analysis"
-	"../traceReplay"
+	"github.com/kai/SpeedyGo/traceReplay/util"
+	algos "github.com/kai/SpeedyGo/traceReplay/detector/analysis"
+	"github.com/kai/SpeedyGo/traceReplay/detector/traceReplay"
 )
 
 // WRDs + WRD transfer over locks only

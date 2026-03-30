@@ -3,9 +3,9 @@ package shb
 import (
 	"fmt"
 
-	"../../util"
-	"../report"
-	"../traceReplay"
+	"github.com/kai/SpeedyGo/traceReplay/util"
+	"github.com/kai/SpeedyGo/traceReplay/detector/report"
+	"github.com/kai/SpeedyGo/traceReplay/detector/traceReplay"
 )
 
 type ListenerAsyncSnd struct{}

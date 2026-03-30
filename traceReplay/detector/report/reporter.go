@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	"../../parser"
-	"../../util"
+	"github.com/kai/SpeedyGo/traceReplay/parser"
+	"github.com/kai/SpeedyGo/traceReplay/util"
 	"github.com/fatih/color"
 )
 

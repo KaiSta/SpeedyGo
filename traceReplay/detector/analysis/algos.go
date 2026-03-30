@@ -3,8 +3,8 @@ package algos
 import (
 	"fmt"
 
-	"../../util"
-	"../traceReplay"
+	"github.com/kai/SpeedyGo/traceReplay/detector/traceReplay"
+	"github.com/kai/SpeedyGo/traceReplay/util"
 )
 
 var detectors map[string]traceReplay.EventListener

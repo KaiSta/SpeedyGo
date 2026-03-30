@@ -8,8 +8,103 @@ import (
 	"strconv"
 	"strings"
 
-	"../util"
+	"github.com/kai/SpeedyGo/traceReplay/util"
 )
+
+// Operation type mapping for faster lookup
+var opTypeMap = map[string]struct {
+	kind      util.OpKind
+	mutex     int
+	chFromPPC bool
+}{
+	"RD":           {util.READ, 0, false},
+	"WR":           {util.WRITE, 0, false},
+	"ARD":          {util.ATOMICREAD, 0, false},
+	"AWR":          {util.ATOMICWRITE, 0, false},
+	"LK":           {util.SEND | util.POST, util.LOCK, false},
+	"UK":           {util.RCV | util.POST, util.UNLOCK, false},
+	"SIG":          {util.SIG, 0, true},
+	"WT":           {util.WAIT, 0, true},
+	"PREBRANCH":    {util.PREBRANCH, 0, false},
+	"POSTBRANCH":   {util.POSTBRANCH, 0, false},
+	"SIGNALJOIN":   {util.SIG, 0, true},
+	"WAITJOIN":     {util.WAIT, 0, true},
+	"SIGNALNOTIFY": {util.SIG, 0, true},
+	"WAITNOTIFY":   {util.WAIT, 0, true},
+	"NT":           {util.NT, 0, true},
+	"NTWT":         {util.NTWT, 0, true},
+}
+
+// parseLine parses a single line and returns a util.Item
+func parseLine(s string, eventCounter int, counter *uint32) (*util.Item, bool) {
+	linesplit := strings.Split(s, ",")
+	if len(linesplit) < 5 {
+		return nil, false
+	}
+
+	it := &util.Item{LocalIdx: eventCounter}
+	op := util.Operation{}
+
+	// Parse channel
+	tmp, _ := strconv.ParseUint(linesplit[2], 10, 64)
+	op.Ch = uint32(tmp)
+
+	// Set buffer size for locks
+	op.BufSize = 0
+	if linesplit[1] == "LK" || linesplit[1] == "UK" {
+		op.BufSize = 1
+	}
+
+	// Parse buffer field (trim Windows carriage return)
+	stmp := strings.TrimSuffix(linesplit[4], "\r")
+	tmp, _ = strconv.ParseUint(stmp, 10, 32)
+	op.BufField = uint32(tmp)
+
+	// Parse file reference
+	split := strings.Split(linesplit[3], ":")
+	if p, ok := FileStringToNum[split[0]]; ok {
+		op.SourceRef = p
+	} else {
+		*counter++
+		if len(split) > 1 {
+			Parserlock.Lock()
+			FileNumToString[*counter] = split[0]
+			Parserlock.Unlock()
+			FileStringToNum[split[0]] = *counter
+			op.SourceRef = *counter
+		}
+	}
+
+	// Parse line number
+	if len(split) > 1 {
+		tmp, _ = strconv.ParseUint(split[1], 10, 32)
+		op.Line = uint32(tmp)
+	}
+	op.PC = 0
+
+	// Parse PPC
+	tmp, _ = strconv.ParseUint(stmp, 10, 64)
+	op.PPC = tmp
+
+	// Parse thread
+	tmp, _ = strconv.ParseUint(linesplit[0], 10, 64)
+	it.Thread = uint32(tmp)
+	it.Partner = 0
+
+	// Parse operation type using map lookup
+	if opType, ok := opTypeMap[linesplit[1]]; ok {
+		op.Kind = opType.kind
+		op.Mutex = opType.mutex
+		if opType.chFromPPC {
+			op.Ch = uint32(op.PPC)
+		}
+	}
+
+	it.Ops = []util.Operation{op}
+	it.LocalIdx = int(op.BufField)
+
+	return it, true
+}
 
 func ParseJTracev2(s string, n uint64) []util.Item {
 	// file table first

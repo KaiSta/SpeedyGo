@@ -6,7 +6,7 @@ package parser
 // 	"strconv"
 // 	"strings"
 
-// 	"../util"
+// 	"github.com/kai/SpeedyGo/traceReplay/util"
 // )
 
 // func getTName(l string) (string, string) {

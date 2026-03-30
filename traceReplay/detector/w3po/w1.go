@@ -1,8 +1,8 @@
 package w3po
 
 import (
-	"../../util"
-	"../report"
+	"github.com/kai/SpeedyGo/traceReplay/util"
+	"github.com/kai/SpeedyGo/traceReplay/detector/report"
 )
 
 type ListenerAsyncSndW1P1 struct{}

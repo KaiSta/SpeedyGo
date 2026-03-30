@@ -3,8 +3,8 @@ package empty
 import (
 	"fmt"
 
-	"../../util"
-	"../analysis"
+	"github.com/kai/SpeedyGo/traceReplay/util"
+	"github.com/kai/SpeedyGo/traceReplay/detector/analysis"
 )
 
 type EventCollector struct{}
