@@ -1,8 +1,8 @@
 package w3po
 
 import (
-	"github.com/kai/SpeedyGo/traceReplay/util"
 	"github.com/kai/SpeedyGo/traceReplay/detector/report"
+	"github.com/kai/SpeedyGo/traceReplay/util"
 	"github.com/xojoc/bitset"
 )
 
@@ -28,19 +28,15 @@ func (l *ListenerDataAccessWCPHBC) Put(p *util.SyncPair) {
 	varstate.current++
 	newFE := &dot{v: t1.vc.clone(), int: varstate.current, t: uint16(p.T1),
 		sourceRef: p.Ev.Ops[0].SourceRef, line: uint16(p.Ev.Ops[0].Line),
-		write: p.Write, ls: make(map[uint32]struct{}), lsCount: make(map[uint32]int), pos: p.Ev.LocalIdx}
-	for _, k := range t1.ls { //copy lockset
-		//lk := locks[k]
-		//newFE.lsCount[k] = lk.count
-		newFE.ls[k] = struct{}{}
-	}
+		write: p.Write, ls: cloneLockset(t1.ls), lsCount: make(map[uint32]int), pos: p.Ev.LocalIdx}
 
 	//var conflictingCritSections vcepoch = newvc2()
 	if p.Write {
-		newFrontier := make([]*dot, 0, len(varstate.frontier))
+		oldFrontier := varstate.frontier
+		newFrontier := oldFrontier[:0]
 		//connectTo := make([]*dot, 0)
 
-		for _, f := range varstate.frontier {
+		for _, f := range oldFrontier {
 			k := f.v.get(uint32(f.t))
 			thi_at_j := t1.vc.get(uint32(f.t))
 
@@ -82,9 +78,10 @@ func (l *ListenerDataAccessWCPHBC) Put(p *util.SyncPair) {
 			newFE.v = newFE.v.ssync(varstate.lastWrite) //sync with last write in advance, necessary for the graph analysis in the following loop!
 		}
 
-		newFrontier := make([]*dot, 0, len(varstate.frontier))
+		oldFrontier := varstate.frontier
+		newFrontier := oldFrontier[:0]
 
-		for _, f := range varstate.frontier {
+		for _, f := range oldFrontier {
 			k := f.v.get(uint32(f.t))          //j#k
 			thi_at_j := t1.vc.get(uint32(f.t)) //Th(i)[j]
 
@@ -264,12 +261,10 @@ func (l *ListenerDataAccessWCPEEHBC) Put(p *util.SyncPair) {
 	varstate.current++
 	newFE := &dot{v: t1.vc.clone(), int: varstate.current, t: uint16(p.T1),
 		sourceRef: p.Ev.Ops[0].SourceRef, line: uint16(p.Ev.Ops[0].Line),
-		write: p.Write, ls: make(map[uint32]struct{}), pos: p.Ev.LocalIdx}
-	for _, k := range t1.ls { //copy lockset
-		newFE.ls[k] = struct{}{}
-	}
+		write: p.Write, ls: cloneLockset(t1.ls), pos: p.Ev.LocalIdx}
 
-	newFrontier := make([]*dot, 0, len(varstate.frontier))
+	oldFrontier := varstate.frontier
+	newFrontier := oldFrontier[:0]
 	connectTo := make([]*dot, 0)
 
 	if p.Write {
@@ -321,7 +316,7 @@ func (l *ListenerDataAccessWCPEEHBC) Put(p *util.SyncPair) {
 			newFE.v = newFE.v.ssync(varstate.lastWrite) //sync with last write in advance, necessary for the graph analysis in the following loop!
 		}
 
-		for _, f := range varstate.frontier {
+		for _, f := range oldFrontier {
 			k := f.v.get(uint32(f.t))          //j#k
 			thi_at_j := t1.vc.get(uint32(f.t)) //Th(i)[j]
 
